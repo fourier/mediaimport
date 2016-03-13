@@ -47,9 +47,45 @@ Example:
      (fad:pathname-as-directory destination-path)
      (timestamp-based-filename input-filename :new-ext new-extension :prefix prefix))))
 
-;; (defun bump-file-name (filename)
-;;   (if (fad:file-exists-p filename)
-;;       (
+(defun integer-format (number digits)
+  "Convert NUMBER to string with at least DIGITS digits.
+Examples:
+
+(integer-format 11 1)
+                           
+\"11\"
+AVCHDCONV> (integer-format 11 2)
+                           
+\"11\"
+AVCHDCONV> (integer-format 11 3)
+                           
+\"011\""
+  (let ((fmt
+         (with-output-to-string (s)
+           (format s "~~~d,'0d" digits)
+           s)))
+    (with-output-to-string (s)
+      (format s fmt number))))
+
+(defun bump-file-name (filename)
+  (let* ((dir (pathname-directory filename)) ; directory
+         (basename (pathname-name filename)) ; filename w/o extension
+         (ext (pathname-type filename))      ; extension
+         ;; possible numeric trailer like for "img10-1.jgp" it will be "1"
+         (trailer (car (ppcre:all-matches-as-strings "-(\\d+$)" basename)))
+         ;; number of digits in the new trailer. either 1 or as in old trailer
+         (digits (if trailer (1- (length trailer)) 1))
+         ;; version bump, if trailer found, increase it, otherwise just 1
+         (bump (if trailer (1+ (parse-integer (subseq trailer 1))) 1))
+         (new-trailer (concatenate 'string "-"
+                                   (integer-format bump digits)))
+         (new-name (if trailer
+                       (ppcre:regex-replace "-(\\d+$)" basename new-trailer)
+                       (concatenate 'string basename new-trailer))))
+    (make-pathname :directory dir :name new-name :type ext)))
+                     
+                                                    
+    
 
 (defmethod construct-target-filenames ((self renamer) &key recursive)
   "TODO: this is outdated
