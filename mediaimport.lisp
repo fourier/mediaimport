@@ -7,6 +7,8 @@
 (defvar *destination-path* "/Volumes/storage/Video/From\ Camera")
 (defvar *source-path* "/Users/alexeyv/1")
 
+(defstruct file-candidate source target timestamp)
+
 (defclass renamer () ((source-path :initarg :source-path)
                       (destination-path :initarg :destination-path)
                       (prefix :initform nil :initarg :prefix)
@@ -27,9 +29,11 @@ Example:
   (let ((ext (or new-ext (pathname-type filename))))
     (multiple-value-bind (second minute hour date month year)
         (decode-universal-time (file-write-date filename))
-      (declare (ignore second))
-      (with-output-to-string (s)
-        (format s "~4,'0d-~2,'0d-~2,'0d/~@[~a~]~2,'0d-~2,'0d~@[.~a~]" year month date prefix hour minute ext)))))
+      (values
+       (with-output-to-string (s)
+         (format s "~4,'0d-~2,'0d-~2,'0d/~@[~a~]~2,'0d-~2,'0d~@[.~a~]" year month date prefix hour minute ext)
+         s)
+         (list year month date hour minute second)))))
 
 (defmethod construct-target-filename ((self renamer) input-filename)
   "TODO: this is outdated
@@ -43,9 +47,12 @@ Example:
 => (construct-target-filename \"~/Sources/lisp/README.txt\" :output-dir \"/Users/alexeyv\" :ext \"mp4\")
 #P\"/Users/alexeyv/2016-03-06/16-47.mp4\""
   (with-slots (destination-path new-extension prefix) self
-    (fad:merge-pathnames-as-file
-     (fad:pathname-as-directory destination-path)
-     (timestamp-based-filename input-filename :new-ext new-extension :prefix prefix))))
+    (multiple-value-bind (fname ts)
+        (timestamp-based-filename input-filename :new-ext new-extension :prefix prefix)
+      (values 
+       (fad:merge-pathnames-as-file
+        (fad:pathname-as-directory destination-path) fname)
+       ts))))
 
 (defun integer-format (number digits)
   "Convert NUMBER to string with at least DIGITS digits.
@@ -114,8 +121,12 @@ RECURSIVIE if set the processing will be done recursively"
             (fad:walk-directory source-path (lambda (x) (push x fnames)))
             (setf fnames (remove-if #'fad:directory-pathname-p (fad:list-directory source-path))))
         (mapcar (lambda (x)
-                  (cons x 
-                        (construct-target-filename self x)))
+                  (multiple-value-bind (fname ts)
+                      (construct-target-filename self x)
+                    (make-file-candidate
+                     :source x
+                     :target fname
+                     :timestamp ts)))
                 (nreverse
                  (if extensions 
                      (remove-if-not #'correct-extension fnames)
@@ -145,8 +156,10 @@ RECURSIVIE if set the processing will be done recursively"
 
 ;;; Tests
 
-;; (make-instance 'renamer :destination-path *destination-path* :new-extension "png")
+;; (make-instance 'renamer :source-path "~/1" :destination-path *destination-path* :new-extension "png")
 
-;; (construct-target-filename * "~/1/crap.jpg")
+;; (construct-target-filename * "~/1/12442783_1081637521900005_512987139_n.jpg")
+
+;; 
 
 
