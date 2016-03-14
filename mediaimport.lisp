@@ -1,8 +1,8 @@
-;;;; avchdconv.lisp
+;;;; mediaimport.lisp
 
-(in-package #:avchdconv)
+(in-package #:mediaimport)
 
-;;; "avchdconv" goes here. Hacks and glory await!
+;;; "mediaimport" goes here. Hacks and glory await!
 
 (defvar *destination-path* "/Volumes/storage/Video/From\ Camera")
 (defvar *source-path* "/Users/alexeyv/1")
@@ -54,10 +54,10 @@ Examples:
 (integer-format 11 1)
                            
 \"11\"
-AVCHDCONV> (integer-format 11 2)
+MEDIAIMPORT> (integer-format 11 2)
                            
 \"11\"
-AVCHDCONV> (integer-format 11 3)
+MEDIAIMPORT> (integer-format 11 3)
                            
 \"011\""
   (let ((fmt
@@ -132,9 +132,15 @@ RECURSIVIE if set the processing will be done recursively"
       (rename-file (car f) (cdr f)))
     (format t "~% Done.~%")))
 
+(defun check-if-equal (filename1 filename2)
+  (let ((cs1 (ironclad:digest-file :sha1 filename1))
+        (cs2 (ironclad:digest-file :sha1 filename2)))
+    (equalp cs1 cs2)))
+
 (defun init()
   #+sbcl
   (setf SB-ALIEN::*DEFAULT-C-STRING-EXTERNAL-FORMAT* :UTF-8))
+
 
 
 ;;; Tests

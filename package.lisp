@@ -1,5 +1,5 @@
 ;;;; package.lisp
 
-(defpackage #:avchdconv
+(defpackage #:mediaimport
   (:use #:cl))
 
