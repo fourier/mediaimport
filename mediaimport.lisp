@@ -20,6 +20,22 @@
     (setf source-path (truename source-path))
     (setf destination-path (truename destination-path))))
 
+(defun file-size (filename)
+  "Return the size of the file with the name FILENAME in bytes"
+  (with-open-file (in filename :element-type '(unsigned-byte 8))
+    (file-length in)))
+
+(defun read-header (filename size)
+  "Read SIZE bytes from the file FILENAME. If the file size is less than SIZE,
+read up to the size of file"
+  (let ((elt-type '(unsigned-byte 8)))
+    (with-open-file (in filename :element-type elt-type)
+      (let* ((fsize (file-length in))
+             (buffer (make-array (min size fsize) :element-type elt-type)))
+        (read-sequence buffer in)
+        buffer))))
+
+
 (defun timestamp-based-filename (filename &key new-ext prefix)
   "TODO: this is outdated
 Constructs the new filename relative path based on a file timestamp.
@@ -31,7 +47,7 @@ Example:
         (decode-universal-time (file-write-date filename))
       (values
        (with-output-to-string (s)
-         (format s "~4,'0d-~2,'0d-~2,'0d/~@[~a~]~2,'0d-~2,'0d~@[.~a~]" year month date prefix hour minute ext)
+         (format s "~4,'0d-~2,'0d-~2,'0d/~@[~a~]~2,'0d_~2,'0d~@[.~a~]" year month date prefix hour minute ext)
          s)
          (list year month date hour minute second)))))
 
@@ -132,21 +148,65 @@ RECURSIVIE if set the processing will be done recursively"
                      (remove-if-not #'correct-extension fnames)
                      fnames)))))))
 
-(defmethod rename-files ((self renamer) &key recursive)
-  (let ((files (construct-target-filenames self :recursive recursive)))
+(defun verify-against-existing (candidates)
+  "Process the list of candidates and try to find existing files.
+If existing files are in place AND are the same, set the candidate name as nil.
+Otherwise try to bump the file name until no file with the same name exists"
+  ;; 1. Remove those candidates for which the target is already exists and
+  ;;    the same
+  (let ((fresh-new
+         (remove-if (lambda (cand) (and (fad:file-exists-p (file-candidate-target cand))
+                                        (check-if-equal (file-candidate-source cand)
+                                                        (file-candidate-target cand))))
+                    candidates)))
+    fresh-new))
+
+(defun yes-no (&optional prompt)
+  (let (answer)
+    (loop while (not (and answer
+                          (or (char-equal (char-upcase answer) #\Y)
+                              (char-equal (char-upcase answer) #\N))))
+          do
+          (if prompt
+              (format *standard-output* "~%~a~%" prompt)
+              (format *standard-output* "~%[y]es/[n]o ?~%"))
+          (setq answer (read-char)))
+    (char-equal (char-upcase answer) #\Y)))
+
+(defun copy-file (from to)
+  #-:lispworks
+  (fad:copy-file from to :overwrite t)
+  ;; only starting from 6.1
+  #+:lispworks
+  (lw:copy-file from to)
+  (values))
+
+(defmethod merge-files ((self renamer) &key delete-original recursive) 
+  (let ((files (verify-against-existing (construct-target-filenames self :recursive recursive)))
+        (merge-fun (if delete-original #'rename-file #'copy-file)))
     (format t "The list of files to be renamed:~%")
     (dolist (f files)
-      (format t "~a =>~%~a~%" (car f) (cdr f)))
-    (format t "~%~% Renaming ...~%")
-    (dolist (f files)    
-      (ensure-directories-exist (fad:pathname-directory-pathname (cdr f)))
-      (rename-file (car f) (cdr f)))
-    (format t "~% Done.~%")))
+      (format t "~a =>~%~a~%" (file-candidate-source f) (file-candidate-target f)))
+    (when (yes-no (if delete-original "Rename files ?" "Copy files ?"))
+      (format t "~%~% Processing ...~%")
+      (dolist (f files)
+        (let ((from (file-candidate-source f))
+              (to (file-candidate-target f)))
+          (ensure-directories-exist (fad:pathname-directory-pathname to))
+          (funcall merge-fun from to)))
+      (format t "~% Done.~%"))))
+
 
 (defun check-if-equal (filename1 filename2)
-  (let ((cs1 (ironclad:digest-file :sha1 filename1))
-        (cs2 (ironclad:digest-file :sha1 filename2)))
-    (equalp cs1 cs2)))
+  ;; first check file sizes
+  (and (= (file-size filename1) (file-size filename2))
+       ;; next check first 8k
+       (equalp (read-header filename1 8192)
+               (read-header filename2 8192))
+       ;; and after that we have to check checksum
+       (let ((cs1 (ironclad:digest-file :sha1 filename1))
+             (cs2 (ironclad:digest-file :sha1 filename2)))
+         (equalp cs1 cs2))))
 
 (defun init()
   #+sbcl
@@ -155,11 +215,11 @@ RECURSIVIE if set the processing will be done recursively"
 
 
 ;;; Tests
-
-;; (make-instance 'renamer :source-path "~/1" :destination-path *destination-path* :new-extension "png")
+;; (in-package :mediaimport)
+;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :new-extension "png"))
 
 ;; (construct-target-filename * "~/1/12442783_1081637521900005_512987139_n.jpg")
 
-;; 
+;; (construct-target-filenames r)
 
 
