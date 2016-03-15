@@ -161,6 +161,26 @@ Otherwise try to bump the file name until no file with the same name exists"
                     candidates)))
     fresh-new))
 
+(defun bump-similar-candidates (candidates)
+  ;; for each candidate
+  ;; while target exists and not the same or there is another candidate
+  ;; with the same name, bump
+  (let ((new-candidates (copy-list candidates)))
+    (dolist (c new-candidates)
+      (let ((from (file-candidate-source c)))
+        (loop while (or (and (fad:file-exists-p (file-candidate-target c))
+                             (not (check-if-equal from (file-candidate-target c))))
+                        (find-if (lambda (x)
+                                   (and 
+                                   (string-equal (namestring (file-candidate-target x)) (namestring (file-candidate-target c)))
+                                   (not (string-equal (namestring (file-candidate-source x)) (namestring (file-candidate-source c))))))
+                                 new-candidates))
+           do
+             (let ((new-version (bump-file-name (file-candidate-target c))))
+               (setf (file-candidate-target c) new-version)))))
+    new-candidates))
+
+
 (defun yes-no (&optional prompt)
   (let (answer)
     (loop while (not (and answer
@@ -182,7 +202,10 @@ Otherwise try to bump the file name until no file with the same name exists"
   (values))
 
 (defmethod merge-files ((self renamer) &key delete-original recursive) 
-  (let ((files (verify-against-existing (construct-target-filenames self :recursive recursive)))
+  (let ((files
+         (bump-similar-candidates
+          (verify-against-existing
+           (construct-target-filenames self :recursive recursive))))
         (merge-fun (if delete-original #'rename-file #'copy-file)))
     (format t "The list of files to be renamed:~%")
     (dolist (f files)
