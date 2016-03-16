@@ -4,9 +4,6 @@
 
 ;;; "mediaimport" goes here. Hacks and glory await!
 
-(defvar *destination-path* "/Volumes/storage/Video/From\ Camera")
-(defvar *source-path* "/Users/alexeyv/1")
-
 (defstruct file-candidate source target timestamp)
 
 (defclass renamer () ((source-path :initarg :source-path)
@@ -60,8 +57,8 @@ Example:
 => (construct-target-filename \"~/Sources/lisp/README.txt\")
 #P\"/Volumes/storage/Video/From Camera/2016-03-06/16-47.txt\"
 
-=> (construct-target-filename \"~/Sources/lisp/README.txt\" :output-dir \"/Users/alexeyv\" :ext \"mp4\")
-#P\"/Users/alexeyv/2016-03-06/16-47.mp4\""
+=> (construct-target-filename \"~/Sources/lisp/README.txt\" :output-dir \"/Users/username\" :ext \"mp4\")
+#P\"/Users/username/2016-03-06/16-47.mp4\""
   (with-slots (destination-path new-extension prefix) self
     (multiple-value-bind (fname ts)
         (timestamp-based-filename input-filename :new-ext new-extension :prefix prefix)

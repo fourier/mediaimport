@@ -1,1 +1,1 @@
-This is the stub README.txt for the "avchdconv" project.
+This is the stub README.txt for the "mediaimport" project.
