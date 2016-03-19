@@ -12,12 +12,11 @@
 (define-interface main-window ()
   ()
   (:panes
-   (input-label display-pane :text "Input directory")
    (input-directory-field text-input-pane)
-   (input-button push-button :text "Browse" :callback #'on-browse-button :data 'input)
-   (output-label display-pane :text "Output directory")   
+   (input-button push-button :text "Choose Input directory..." :callback #'on-browse-button :data 'input)
    (output-directory-field text-input-pane)
-   (output-button push-button :text "Browse" :callback #'on-browse-button :data 'output)
+   (output-button push-button :text "Choose Output directory..." :callback #'on-browse-button :data 'output)
+   (recursive-checkbox check-button :text "Search in subdirectories")
    (input-ext text-input-pane :title "Extension" :text "*.*")
    (output-ext text-input-pane :title "Output extension")
    (collect-button push-button :text "Collect data" :callback #'on-collect-button)
@@ -38,12 +37,13 @@
                   :visible-min-width (character 45))))
    (copy-button push-button :text "Copy..."))
    (:layouts
-    (input-output-layout grid-layout '(input-label input-directory-field input-button
-                                       output-label output-directory-field output-button)
-                         :columns 3 :rows 2
+    (input-output-layout grid-layout '(input-button input-directory-field
+                                       output-button output-directory-field)
+                         :columns 2 :rows 2
                          :x-adjust '(:right :left)
                          :y-adjust '(:center :center))
-    (extensions-layout row-layout '(input-ext output-ext))
+    (extensions-layout row-layout '(recursive-checkbox input-ext output-ext)
+                       :y-adjust '(:center))
     (main-layout column-layout '(input-output-layout
                                  extensions-layout
                                  collect-button
@@ -71,7 +71,7 @@
 
 (defun on-collect-button (data self)
   (declare (ignore data))
-  (with-slots (proposal-table input-directory-field output-directory-field) self
+  (with-slots (proposal-table input-directory-field output-directory-field recursive-checkbox) self
       (let ((source-path (text-input-pane-text input-directory-field))
             (dest-path (text-input-pane-text output-directory-field)))
         (when (and (> (length source-path) 0) (> (length dest-path) 0))
@@ -79,7 +79,8 @@
                                    :source-path source-path
                                    :destination-path dest-path
                                    :extensions "jpg" :new-extension "png"))
-                 (candidates (create-list-of-candidates r)))
+                 (candidates (create-list-of-candidates r
+                                                        :recursive (button-selected recursive-checkbox))))
             (setf (collection-items proposal-table)
                   candidates))))))
 
@@ -99,12 +100,17 @@
         :red
         nil)))
 
-(defun edit-candidate-callback (data interface)
-  (let ((current-path (file-candidate-target data)))
+(defun edit-candidate-callback (data self)
+  (with-slots (proposal-table) self
     (let ((message 
            (with-output-to-string (s)
              (format s "Rename ~a to" (namestring (file-candidate-source data))))))
-      (prompt-for-string message :text (namestring (file-candidate-target data))))))
+      (multiple-value-bind (fname result) 
+          (prompt-for-string message :text (namestring (file-candidate-target data)))
+        (when (and result
+                   (not (equal fname (file-candidate-target data))))
+          (setf (file-candidate-target data) fname)
+          (redisplay-collection-item proposal-table data))))))
 
 @export
 (defun main ()
