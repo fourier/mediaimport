@@ -1,12 +1,14 @@
 ;;;; mediaimport.lisp
 (defpackage #:mediaimport
-  (:use #:cl))
+  (:use #:cl #:cl-annot.class))
 
 (in-package #:mediaimport)
 (annot:enable-annot-syntax)
 
 ;;; "mediaimport" goes here. Hacks and glory await!
 
+@export
+@export-accessors
 (defstruct file-candidate source target timestamp)
 
 @export
@@ -110,7 +112,6 @@ MEDIAIMPORT> (integer-format 11 3)
                      
                                                     
     
-
 (defmethod construct-target-filenames ((self renamer) &key recursive)
   "TODO: this is outdated
   Traverse through the INPUT-DIR and returns a list of pairs:
@@ -204,9 +205,7 @@ Otherwise try to bump the file name until no file with the same name exists"
 
 (defmethod merge-files ((self renamer) &key delete-original recursive) 
   (let ((files
-         (bump-similar-candidates
-          (verify-against-existing
-           (construct-target-filenames self :recursive recursive))))
+         (create-list-of-candidates self :recursive recursive))
         (merge-fun (if delete-original #'rename-file #'copy-file)))
     (format t "The list of files to be renamed:~%")
     (dolist (f files)
@@ -220,6 +219,17 @@ Otherwise try to bump the file name until no file with the same name exists"
           (funcall merge-fun from to)))
       (format t "~% Done.~%"))))
 
+@export
+(defmethod create-list-of-candidates ((self renamer) &key recursive)
+  (let ((files
+         (bump-similar-candidates
+          (verify-against-existing
+           (construct-target-filenames self :recursive recursive)))))
+    files))
+  
+           
+           
+           
 
 (defun check-if-equal (filename1 filename2)
   ;; first check file sizes
