@@ -7,8 +7,9 @@
   :depends-on (#:alexandria
                #:cl-fad
                #:cl-ppcre
-               #:ironclad)
+               #:ironclad
+               #:cl-annot)
   :serial t
-  :components ((:file "package")
-               (:file "mediaimport")))
+  :components ((:file "mediaimport")
+               (:file "mediaimport-ui")))
 

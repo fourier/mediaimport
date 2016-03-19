@@ -1,11 +1,15 @@
 ;;;; mediaimport.lisp
+(defpackage #:mediaimport
+  (:use #:cl))
 
 (in-package #:mediaimport)
+(annot:enable-annot-syntax)
 
 ;;; "mediaimport" goes here. Hacks and glory await!
 
 (defstruct file-candidate source target timestamp)
 
+@export
 (defclass renamer () ((source-path :initarg :source-path)
                       (destination-path :initarg :destination-path)
                       (prefix :initform nil :initarg :prefix)
@@ -228,6 +232,7 @@ Otherwise try to bump the file name until no file with the same name exists"
              (cs2 (ironclad:digest-file :sha1 filename2)))
          (equalp cs1 cs2))))
 
+@export
 (defun init()
   #+sbcl
   (setf SB-ALIEN::*DEFAULT-C-STRING-EXTERNAL-FORMAT* :UTF-8))
