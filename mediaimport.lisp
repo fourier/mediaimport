@@ -245,7 +245,9 @@ Otherwise try to bump the file name until no file with the same name exists"
 @export
 (defun init()
   #+sbcl
-  (setf SB-ALIEN::*DEFAULT-C-STRING-EXTERNAL-FORMAT* :UTF-8))
+  (setf SB-ALIEN::*DEFAULT-C-STRING-EXTERNAL-FORMAT* :UTF-8)
+  #+lispworks
+  (lw:set-default-character-element-type 'lw:bmp-char))
 
 
 

@@ -22,7 +22,8 @@
    (collect-button push-button :text "Collect data" :callback #'on-collect-button)
    (proposal-table multi-column-list-panel
       :visible-min-width 600
-      :visible-min-height :text-height
+      :visible-min-height 200
+;      :visible-min-height :text-height
       :column-function 'file-candidate-to-row
       :color-function 'color-file-candidate
       :action-callback 'edit-candidate-callback
@@ -104,13 +105,14 @@
   (with-slots (proposal-table) self
     (let ((message 
            (with-output-to-string (s)
-             (format s "Rename ~a to" (namestring (file-candidate-source data))))))
+             (format s "Rename ~a" (namestring (file-candidate-source data))))))
       (multiple-value-bind (fname result) 
           (prompt-for-string message :text (namestring (file-candidate-target data)))
         (when (and result
                    (not (equal fname (file-candidate-target data))))
           (setf (file-candidate-target data) fname)
           (redisplay-collection-item proposal-table data))))))
+
 
 @export
 (defun main ()
