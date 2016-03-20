@@ -1,10 +1,14 @@
 ;;;; mediaimport.lisp
+;; 
+;; To run, execute (mediaimport-ui:main)
+;;
 (defpackage #:mediaimport-ui
   (:use #:cl #:capi #:mediaimport)
   (:add-use-defaults t))
 
 (in-package #:mediaimport-ui)
 (annot:enable-annot-syntax)
+;;(declaim (optimize (debug 3)))
 
 (defvar *main-window* nil
   "Main window instance")

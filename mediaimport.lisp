@@ -38,6 +38,15 @@ read up to the size of file"
         (read-sequence buffer in)
         buffer))))
 
+(defun get-timestamp-from-exif (filename)
+  (let* ((exif (zpb-exif:make-exif (truename filename)))
+         (dto (zpb-exif:exif-value :DateTimeOriginal exif))
+         (dt (zpb-exif:exif-value :DateTime exif))
+         (gts (zpb-exif:exif-value :GPSTimeStamp exif))
+         ;; #(18 29 299/10)
+         (gds (zpb-exif:exif-value :GPSDateStamp exif)))
+         ;;"2015:06:09"
+         gds))
 
 (defun timestamp-based-filename (filename &key new-ext prefix)
   "TODO: this is outdated
