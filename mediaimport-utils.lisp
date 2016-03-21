@@ -36,8 +36,12 @@ Example:
               (if (not ht-value)
                   (setf (gethash arg nonuniques-table) 1)
                   (incf (gethash arg nonuniques-table)))))
-          items)
-    (maphash (lambda (key val)
-               (when (= val 1) (remhash key nonuniques-table)))
-             nonuniques-table)))
-    
+          items)))
+   
+
+@export
+(defmethod is-duplicate ((self duplicate-finder) arg)
+  (with-slots (nonuniques-table) self
+    (multiple-value-bind (value result)
+        (gethash arg nonuniques-table)
+      (values (if (not result) nil (> value 1)) result))))
