@@ -1,6 +1,6 @@
 ;;;; mediaimport.lisp
 (defpackage #:mediaimport
-  (:use #:cl #:cl-annot.class))
+  (:use #:cl #:cl-annot.class #:mediaimport-utils))
 
 (in-package #:mediaimport)
 (annot:enable-annot-syntax)
@@ -11,17 +11,39 @@
 @export-accessors
 (defstruct file-candidate source target timestamp)
 
+(defstruct (datetime (:constructor create-datetime (year month date hour minute second))
+                     (:constructor)) year month date hour minute second)
+
+
 @export
 (defclass renamer () ((source-path :initarg :source-path)
                       (destination-path :initarg :destination-path)
                       (prefix :initform nil :initarg :prefix)
                       (extensions :initform nil :initarg :extensions)
-                      (new-extension :initform nil :initarg :new-extension)))
+                      (new-extension :initform nil :initarg :new-extension)
+                      (use-exif :initform nil :initarg :use-exif)))
 
 (defmethod initialize-instance :after ((self renamer) &key)
-  (with-slots (source-path destination-path) self
+  (with-slots (source-path destination-path extensions new-extension) self
+    ;; process paths
     (setf source-path (truename source-path))
-    (setf destination-path (truename destination-path))))
+    (setf destination-path (truename destination-path))
+    ;; process extensions
+    (cond ((and extensions (= (length extensions) 0))
+           (setf extensions nil))
+          ((and extensions (atom extensions))
+           (setf extensions (mapcar (lambda (x)
+                                      (string-upcase (string-trim " " x)))
+                                    (lw:split-sequence "," extensions)))
+           (when (= (length extensions) 1)
+             (setf extensions (car extensions))))
+          ((and extensions (listp extensions))
+           (setf extensions (mapcar (lambda (x)
+                                      (string-upcase (string-trim " " x)))
+                                    extensions))))
+    (setf new-extension (if (= (length new-extension) 0)
+                            nil
+                            (string-trim " " new-extension)))))
 
 (defun file-size (filename)
   "Return the size of the file with the name FILENAME in bytes"
@@ -38,30 +60,76 @@ read up to the size of file"
         (read-sequence buffer in)
         buffer))))
 
-(defun get-timestamp-from-exif (filename)
-  (let* ((exif (zpb-exif:make-exif (truename filename)))
-         (dto (zpb-exif:exif-value :DateTimeOriginal exif))
-         (dt (zpb-exif:exif-value :DateTime exif))
-         (gts (zpb-exif:exif-value :GPSTimeStamp exif))
-         ;; #(18 29 299/10)
-         (gds (zpb-exif:exif-value :GPSDateStamp exif)))
-         ;;"2015:06:09"
-         gds))
 
-(defun timestamp-based-filename (filename &key new-ext prefix)
+(defun make-datetime-from-string (str)
+  "Create a datetime struct from the string like \"2011:01:02 13:28:10\".
+Example:
+=> (make-datetime-from-string \"2011:01:02 13:28:33333\")
+#S(DATETIME :YEAR 2011 :MONTH 1 :DATE 2 :HOUR 13 :MINUTE 28 :SECOND 33333)"
+  (let ((parsed-numbers
+         (mapcar #'parse-integer (apply #'append
+                                        (mapcar (lambda (x)
+                                                  (lw:split-sequence ":" x))
+                                                (lw:split-sequence " " str))))))
+    (apply #'create-datetime parsed-numbers)))
+
+(defun make-datetime-from-gps-timestamps (gds gts)
+  "Create a datetime struct from pair of EXIF GPS timestamp values
+extracted with zpb-exif library, GPSDateStamp(GDS) and GPSTimeStamp(GTS).
+The GPSDateStamp is in format like\"2015:06:09\"
+The GPSTimeStamp is in format like #(18 29 299/10)"
+  (let ((parsed-numbers
+         (append (mapcar #'parse-integer (lw:split-sequence ":" gds))
+                 (mapcar #'truncate (map 'list #'identity  gts)))))
+    (apply #'create-datetime parsed-numbers)))
+  
+(defun timestamp-from-file (filename)
+  (multiple-value-bind (second minute hour date month year)
+      (decode-universal-time (file-write-date filename))
+    (make-datetime :year year :month month :date date
+                   :hour hour :minute minute :second second)))
+
+
+(defun timestamp-from-exif (filename)
+  (handler-case
+      (let* ((exif (zpb-exif:make-exif (truename filename)))
+             (dto (zpb-exif:exif-value :DateTimeOriginal exif))
+             ;; "2012:01:23 00:17:40"
+             (dt (zpb-exif:exif-value :DateTime exif))
+             ;; "2012:01:23 00:17:40"
+             (gds (zpb-exif:exif-value :GPSDateStamp exif))
+             ;;"2015:06:09"
+             (gts (zpb-exif:exif-value :GPSTimeStamp exif)))
+        ;; #(18 29 299/10)
+        ;; logic the flowing:
+        (cond ((or dto dt) ;; if DateTimeOriginal or DateTime, use it
+               (make-datetime-from-string (or dto dt)))
+              ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
+               (make-datetime-from-gps-timestamps gds gts))))
+    (zpb-exif:invalid-exif-stream (err) nil)))
+
+
+(defun timestamp-based-filename (filename timestamp
+                                          &key
+                                          new-ext
+                                          prefix)
   "TODO: this is outdated
 Constructs the new filename relative path based on a file timestamp.
 Example:
 => (timestamp-based-filename \"~/Sources/lisp/README.txt\")
 \"2016-03-06/IMAGE_16-47.txt\""
   (let ((ext (or new-ext (pathname-type filename))))
-    (multiple-value-bind (second minute hour date month year)
-        (decode-universal-time (file-write-date filename))
-      (values
-       (with-output-to-string (s)
-         (format s "~4,'0d-~2,'0d-~2,'0d/~@[~a~]~2,'0d_~2,'0d~@[.~a~]" year month date prefix hour minute ext)
-         s)
-         (list year month date hour minute second)))))
+    (with-output-to-string (s)
+         (format s "~4,'0d-~2,'0d-~2,'0d/~@[~a~]~2,'0d_~2,'0d~@[.~a~]"
+                 (datetime-year timestamp)
+                 (datetime-month timestamp)
+                 (datetime-date timestamp)
+                 prefix
+                 (datetime-hour timestamp)
+                 (datetime-minute timestamp)
+                 ext)
+         s)))
+
 
 (defmethod construct-target-filename ((self renamer) input-filename)
   "TODO: this is outdated
@@ -74,13 +142,20 @@ Example:
 
 => (construct-target-filename \"~/Sources/lisp/README.txt\" :output-dir \"/Users/username\" :ext \"mp4\")
 #P\"/Users/username/2016-03-06/16-47.mp4\""
-  (with-slots (destination-path new-extension prefix) self
-    (multiple-value-bind (fname ts)
-        (timestamp-based-filename input-filename :new-ext new-extension :prefix prefix)
+  (with-slots (destination-path new-extension prefix use-exif) self
+    (let* ((ext (string-upcase (pathname-type input-filename)))
+           (timestamp (or (and (equal ext "JPG")
+                               use-exif
+                               (timestamp-from-exif input-filename))
+                          (timestamp-from-file input-filename)))
+           (fname (timestamp-based-filename input-filename
+                                            timestamp
+                                            :new-ext new-extension
+                                            :prefix prefix)))
       (values 
        (fad:merge-pathnames-as-file
         (fad:pathname-as-directory destination-path) fname)
-       ts))))
+       timestamp))))
 
 (defun integer-format (number digits)
   "Convert NUMBER to string with at least DIGITS digits.
@@ -122,27 +197,15 @@ MEDIAIMPORT> (integer-format 11 3)
                                                     
     
 (defmethod construct-target-filenames ((self renamer) &key recursive)
-  "TODO: this is outdated
-  Traverse through the INPUT-DIR and returns a list of pairs:
-    ((file1 . output-file1) ... (fileN . output-fileN))
-of filenames in the INPUT-DIR mapped according the timestamp.
-Here fileN - file name in the directory INPUT-DIR,
-output-fileN - file name constructed according to the timestamp
-of the fileN.
-
-OUTPUT-DIR is the optional output directory
-INPUT-EXT is the extension (or list of extensions) of files
-to process
-OUTPUT-EXT the extension to be used instead of original ones
-RECURSIVIE if set the processing will be done recursively"
+  "TODO: document it"
   (with-slots (source-path destination-path extensions new-extension) self
     (flet ((correct-extension (fname)
              (let ((ext (string-upcase (pathname-type fname))))
                (cond ((null extensions) t)
-                     ((atom extensions) (string= (string-upcase extensions) ext))
+                     ((atom extensions) (string= extensions ext))
                      ((consp extensions)
                       (find ext extensions :test (lambda (x y)
-                                                  (string= (string-upcase y) x))))))))
+                                                  (string= y x))))))))
       (let (fnames)
         (if recursive
             (fad:walk-directory source-path (lambda (x) (push x fnames)))
@@ -173,9 +236,9 @@ Otherwise try to bump the file name until no file with the same name exists"
     fresh-new))
 
 (defun bump-similar-candidates (candidates)
-  ;; for each candidate
-  ;; while target exists and not the same or there is another candidate
-  ;; with the same name, bump
+"For each candidate
+while target exists and not the same or there is another candidate
+with the same name, bump"
   (let ((new-candidates (copy-list candidates)))
     (dolist (c new-candidates)
       (let ((from (file-candidate-source c)))

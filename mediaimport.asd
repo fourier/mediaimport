@@ -8,8 +8,10 @@
                #:cl-fad
                #:cl-ppcre
                #:ironclad
-               #:cl-annot)
+               #:cl-annot
+               #:zpb-exif)
   :serial t
-  :components ((:file "mediaimport")
+  :components ((:file "mediaimport-utils")
+               (:file "mediaimport")
                (:file "mediaimport-ui")))
 

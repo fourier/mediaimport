@@ -8,7 +8,6 @@
 
 (in-package #:mediaimport-ui)
 (annot:enable-annot-syntax)
-;;(declaim (optimize (debug 3)))
 
 (defvar *main-window* nil
   "Main window instance")
@@ -21,8 +20,9 @@
    (output-directory-field text-input-pane)
    (output-button push-button :text "Choose Output directory..." :callback #'on-browse-button :data 'output)
    (recursive-checkbox check-button :text "Search in subdirectories")
-   (input-ext text-input-pane :title "Extension" :text "*.*")
-   (output-ext text-input-pane :title "Output extension")
+   (exif-checkbox check-button :text "Use EXIF for JPG")
+   (input-ext text-input-pane :title "Comma-separated list of extension[s], like \"jpg,png\"" :text "jpg")
+   (output-ext text-input-pane :title "Output extension" :visible-max-width 40)
    (collect-button push-button :text "Collect data" :callback #'on-collect-button)
    (proposal-table multi-column-list-panel
       :visible-min-width 600
@@ -47,8 +47,12 @@
                          :columns 2 :rows 2
                          :x-adjust '(:right :left)
                          :y-adjust '(:center :center))
-    (extensions-layout row-layout '(recursive-checkbox input-ext output-ext)
-                       :y-adjust '(:center))
+    (extensions-layout grid-layout '(recursive-checkbox input-ext
+                                     exif-checkbox output-ext)
+                       :columns 2 :rows 2
+                       :x-adjust '(:left :right)
+                       :y-adjust '(:center :center))
+    
     (main-layout column-layout '(input-output-layout
                                  extensions-layout
                                  collect-button
@@ -76,14 +80,24 @@
 
 (defun on-collect-button (data self)
   (declare (ignore data))
-  (with-slots (proposal-table input-directory-field output-directory-field recursive-checkbox) self
+  (with-slots (proposal-table
+               input-directory-field
+               output-directory-field
+               input-ext
+               output-ext
+               recursive-checkbox
+               exif-checkbox) self
       (let ((source-path (text-input-pane-text input-directory-field))
             (dest-path (text-input-pane-text output-directory-field)))
         (when (and (> (length source-path) 0) (> (length dest-path) 0))
-          (let* ((r (make-instance 'renamer
+          (let* ((extensions (text-input-pane-text input-ext))
+                 (new-extension (text-input-pane-text output-ext))
+                 (r (make-instance 'renamer
                                    :source-path source-path
                                    :destination-path dest-path
-                                   :extensions "jpg" :new-extension "png"))
+                                   :extensions extensions
+                                   :new-extension new-extension
+                                   :use-exif (button-selected exif-checkbox)))
                  (candidates (create-list-of-candidates r
                                                         :recursive (button-selected recursive-checkbox))))
             (setf (collection-items proposal-table)
