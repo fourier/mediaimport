@@ -45,3 +45,4 @@ Example:
     (multiple-value-bind (value result)
         (gethash arg nonuniques-table)
       (values (if (not result) nil (> value 1)) result))))
+

@@ -11,9 +11,11 @@
 
 (defvar *main-window* nil
   "Main window instance")
+  
 
 (define-interface main-window ()
-  ()
+  ((candidates :initform nil)
+   (duplicates :initform nil))
   (:panes
    (input-directory-field text-input-pane)
    (input-button push-button :text "Choose Input directory..." :callback #'on-browse-button :data 'input)
@@ -27,7 +29,7 @@
    (proposal-table multi-column-list-panel
       :visible-min-width 600
       :visible-min-height 200
-;      :visible-min-height :text-height
+      :callback-type :item-interface
       :column-function 'file-candidate-to-row
       :color-function 'color-file-candidate
       :action-callback 'edit-candidate-callback
@@ -62,6 +64,24 @@
   (:default-initargs :title "Media Import"
    :visible-min-width 800
    :layout 'main-layout))
+
+(defmethod initialize-instance :after ((self main-window) &key &allow-other-keys))
+
+(defmethod set-candidates ((self main-window) new-candidates)
+  (with-slots (candidates) self
+    (setf candidates new-candidates)
+    (notify-candidates-updated self)))
+
+(defmethod notify-candidates-updated ((self main-window))
+  (with-slots (candidates duplicates) self
+    (if (not candidates)
+        (setf duplicates nil)
+        (setf duplicates (make-instance 'duplicate-finder
+                                        :items candidates
+                                        :key #'file-candidate-target)))))
+
+  
+
 
 (defun on-browse-button (data self)
   (with-slots (input-directory-field output-directory-field) self
@@ -119,17 +139,17 @@
         :red
         nil)))
 
-(defun edit-candidate-callback (data self)
+(defun edit-candidate-callback (item self)
   (with-slots (proposal-table) self
     (let ((message 
            (with-output-to-string (s)
-             (format s "Rename ~a" (namestring (file-candidate-source data))))))
+             (format s "Rename ~a" (namestring (file-candidate-source item))))))
       (multiple-value-bind (fname result) 
-          (prompt-for-string message :text (namestring (file-candidate-target data)))
+          (prompt-for-string message :text (namestring (file-candidate-target item)))
         (when (and result
-                   (not (equal fname (file-candidate-target data))))
-          (setf (file-candidate-target data) fname)
-          (redisplay-collection-item proposal-table data))))))
+                   (not (equal fname (file-candidate-target item))))
+          (setf (file-candidate-target item) fname)
+          (redisplay-collection-item proposal-table item))))))
 
 
 @export
