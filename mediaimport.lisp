@@ -60,6 +60,18 @@ read up to the size of file"
         (read-sequence buffer in)
         buffer))))
 
+(defun interleave (list1 list2)
+  "Interleaves 2 lists.
+Example:
+=> (interleave '(1 2 3) '(-1 -2 -3))
+(1 -1 2 -2 3 -3)"
+  (let ((parity t)
+        (result (copy-list list1)))
+    (merge 'list result list2
+           (lambda (x y)
+             (declare (ignore x) (ignore y))
+             (setf parity (not parity))))
+    result))
 
 (defun make-datetime-from-string (str)
   "Create a datetime struct from the string like \"2011:01:02 13:28:10\".
