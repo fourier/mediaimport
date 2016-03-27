@@ -68,22 +68,32 @@
 
 (defclass file-candidate-item (file-candidate)
   ((color :accessor file-candidate-color :initarg :color :initform :black)
-   (comment :accessor file-candidate-comment :initarg :comment :initform "")))
+   (comment :accessor file-candidate-comment :initarg :comment :initform "")
+   (status :accessor file-candidate-status :initform nil)))
 
+(defmethod update-candidate-status ((self file-candidate-item))
+  (with-slots (color comment status) self
+    (cond ((eql status 'exists)
+           (setf color :red
+                 comment "File already exist"))
+          ((eql status 'duplicate)
+           (setf color :red
+                 comment "Duplicate name"))
+          (t
+           (setf color :black
+                 comment "")))))
 
 (defun update-candidate (cand duplicates redisplay-function)
-  (let ((old-color (file-candidate-color cand)))
+  (let ((old-status (file-candidate-status cand)))
     (cond ((fad:file-exists-p
             (file-candidate-target cand))
-           (setf (file-candidate-color cand) :red
-                 (file-candidate-comment cand) "File already exist"))
+           (setf (file-candidate-status cand) 'exists))
           ((duplicate-p duplicates (namestring (file-candidate-target cand)))
-           (setf (file-candidate-color cand) :red
-                 (file-candidate-comment cand) "Duplicate name"))
+           (setf (file-candidate-status cand) 'duplicate))
           (t
-           (setf (file-candidate-color cand) :black
-                 (file-candidate-comment cand) "")))
-    (unless (eql old-color (file-candidate-color cand))
+           (setf (file-candidate-status cand) nil)))
+    (unless (eql old-status (file-candidate-status cand))
+      (update-candidate-status cand)
       (funcall redisplay-function cand))))
   
 
@@ -165,6 +175,8 @@
         (when (and result
                    (not (equal fname (file-candidate-target item))))
           (setf (file-candidate-target item) (pathname fname))
+          ;; update text
+          (redisplay-collection-item proposal-table item)
           (update-candidates self (collection-items proposal-table)))))))
 
 
