@@ -30,7 +30,7 @@ Example:
 
 (defmethod initialize-instance :after ((self duplicate-finder) &key)
   (with-slots (items key nonuniques-table) self
-    (mapc (lambda (x)
+    (map nil (lambda (x)
             (let* ((arg (funcall key x))
                    (ht-value (gethash arg nonuniques-table)))
               (if (not ht-value)
@@ -40,7 +40,7 @@ Example:
    
 
 @export
-(defmethod is-duplicate ((self duplicate-finder) arg)
+(defmethod duplicate-p ((self duplicate-finder) arg)
   (with-slots (nonuniques-table) self
     (multiple-value-bind (value result)
         (gethash arg nonuniques-table)

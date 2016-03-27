@@ -67,19 +67,35 @@
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys))
 
 (defclass file-candidate-item (file-candidate)
-  ((color :accessor file-candidate-color :initarg :color)
-   (comment :accessor file-candidate-comment :initarg :comment)))
+  ((color :accessor file-candidate-color :initarg :color :initform :black)
+   (comment :accessor file-candidate-comment :initarg :comment :initform "")))
 
+
+(defun update-candidate (cand duplicates redisplay-function)
+  (let ((old-color (file-candidate-color cand)))
+    (cond ((fad:file-exists-p
+            (file-candidate-target cand))
+           (setf (file-candidate-color cand) :red
+                 (file-candidate-comment cand) "File already exist"))
+          ((duplicate-p duplicates (namestring (file-candidate-target cand)))
+           (setf (file-candidate-color cand) :red
+                 (file-candidate-comment cand) "Duplicate name"))
+          (t
+           (setf (file-candidate-color cand) :black
+                 (file-candidate-comment cand) "")))
+    (unless (eql old-color (file-candidate-color cand))
+      (funcall redisplay-function cand))))
+  
 
 (defmethod update-candidates ((self main-window) candidates)
-  (with-slots (duplicates) self
-    (unless duplicates
-      (setf duplicates (make-instance 'duplicate-finder
+  (with-slots (duplicates proposal-table) self
+    (setf duplicates (make-instance 'duplicate-finder
                                       :items candidates
-                                      :key #'file-candidate-target)))
-    (mapc (lambda (cand) 
-            (setf (file-candidate-color cand) :black)
-            (setf (file-candidate-comment cand) ""))
+                                      :key (alexandria:compose #'namestring #'file-candidate-target)))
+    ;; map over sequence - candidates could be a list or vector
+    (map nil (lambda (cand)
+               (update-candidate cand duplicates
+                                 (alexandria:curry #'redisplay-collection-item proposal-table)))
           candidates)))
 
 
@@ -107,8 +123,7 @@
                input-ext
                output-ext
                recursive-checkbox
-               exif-checkbox
-               duplicates) self
+               exif-checkbox) self
       (let ((source-path (text-input-pane-text input-directory-field))
             (dest-path (text-input-pane-text output-directory-field)))
         (when (and (> (length source-path) 0) (> (length dest-path) 0))
@@ -134,18 +149,11 @@
   (list (file-candidate-source cand)
         (file-candidate-target cand)
         (file-candidate-comment cand)))
-;;;         (if (fad:file-exists-p
-;;;              (file-candidate-target cand))
-;;;              "File already exists" "")))
 
 (defun color-file-candidate (lp candidate state)
   (declare (ignore lp))
   (when (eq state :normal)
     (file-candidate-color candidate)))
-;;;     (if (fad:file-exists-p
-;;;          (file-candidate-target candidate))
-;;;         :red
-;;;         nil)))
 
 (defun edit-candidate-callback (item self)
   (with-slots (proposal-table) self
@@ -156,8 +164,8 @@
           (prompt-for-string message :text (namestring (file-candidate-target item)))
         (when (and result
                    (not (equal fname (file-candidate-target item))))
-          (setf (file-candidate-target item) fname)
-          (redisplay-collection-item proposal-table item))))))
+          (setf (file-candidate-target item) (pathname fname))
+          (update-candidates self (collection-items proposal-table)))))))
 
 
 @export
