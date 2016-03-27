@@ -3,7 +3,7 @@
 ;; To run, execute (mediaimport-ui:main)
 ;;
 (defpackage #:mediaimport-ui
-  (:use #:cl #:capi #:mediaimport)
+  (:use #:cl #:capi #:mediaimport-utils #:mediaimport)
   (:add-use-defaults t))
 
 (in-package #:mediaimport-ui)
@@ -14,12 +14,11 @@
   
 
 (define-interface main-window ()
-  ((candidates :initform nil)
-   (duplicates :initform nil))
+  ((duplicates :initform nil))
   (:panes
-   (input-directory-field text-input-pane)
-   (input-button push-button :text "Choose Input directory..." :callback #'on-browse-button :data 'input)
-   (output-directory-field text-input-pane)
+   (input-directory-field text-input-pane :callback #'on-collect-button)
+   (input-button push-button :text "Choose Input directory..." :callback #'on-browse-button :data 'input )
+   (output-directory-field text-input-pane :callback #'on-collect-button)
    (output-button push-button :text "Choose Output directory..." :callback #'on-browse-button :data 'output)
    (recursive-checkbox check-button :text "Search in subdirectories")
    (exif-checkbox check-button :text "Use EXIF for JPG")
@@ -71,20 +70,17 @@
   ((color :accessor file-candidate-color :initarg :color)
    (comment :accessor file-candidate-comment :initarg :comment)))
 
-(defmethod set-candidates ((self main-window) new-candidates)
-  (with-slots (candidates) self
-    (setf candidates new-candidates)
-    (notify-candidates-updated self)))
 
-(defmethod notify-candidates-updated ((self main-window))
-  (with-slots (candidates duplicates) self
-    (if (not candidates)
-        (setf duplicates nil)
-        (setf duplicates (make-instance 'duplicate-finder
-                                        :items candidates
-                                        :key #'file-candidate-target)))))
-
-  
+(defmethod update-candidates ((self main-window) candidates)
+  (with-slots (duplicates) self
+    (unless duplicates
+      (setf duplicates (make-instance 'duplicate-finder
+                                      :items candidates
+                                      :key #'file-candidate-target)))
+    (mapc (lambda (cand) 
+            (setf (file-candidate-color cand) :black)
+            (setf (file-candidate-comment cand) ""))
+          candidates)))
 
 
 (defun on-browse-button (data self)
@@ -103,6 +99,7 @@
 
 
 (defun on-collect-button (data self)
+  ;; could be called from edit fields or as a button itself
   (declare (ignore data))
   (with-slots (proposal-table
                input-directory-field
@@ -110,7 +107,8 @@
                input-ext
                output-ext
                recursive-checkbox
-               exif-checkbox) self
+               exif-checkbox
+               duplicates) self
       (let ((source-path (text-input-pane-text input-directory-field))
             (dest-path (text-input-pane-text output-directory-field)))
         (when (and (> (length source-path) 0) (> (length dest-path) 0))
@@ -125,10 +123,9 @@
                  (candidates (create-list-of-candidates r
                                                         :recursive (button-selected recursive-checkbox))))
             (mapc (lambda (cand)
-                    (change-class cand 'file-candidate-item)
-                    (setf (file-candidate-color cand) :black)
-                    (setf (file-candidate-comment cand) ""))
+                    (change-class cand 'file-candidate-item))
                   candidates)
+            (update-candidates self candidates)
             (setf (collection-items proposal-table)
                   candidates))))))
 
