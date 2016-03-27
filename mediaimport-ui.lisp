@@ -67,6 +67,10 @@
 
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys))
 
+(defclass file-candidate-item (file-candidate)
+  ((color :accessor file-candidate-color :initarg :color)
+   (comment :accessor file-candidate-comment :initarg :comment)))
+
 (defmethod set-candidates ((self main-window) new-candidates)
   (with-slots (candidates) self
     (setf candidates new-candidates)
@@ -120,6 +124,11 @@
                                    :use-exif (button-selected exif-checkbox)))
                  (candidates (create-list-of-candidates r
                                                         :recursive (button-selected recursive-checkbox))))
+            (mapc (lambda (cand)
+                    (change-class cand 'file-candidate-item)
+                    (setf (file-candidate-color cand) :black)
+                    (setf (file-candidate-comment cand) ""))
+                  candidates)
             (setf (collection-items proposal-table)
                   candidates))))))
 
@@ -127,17 +136,19 @@
 (defun file-candidate-to-row (cand)
   (list (file-candidate-source cand)
         (file-candidate-target cand)
-        (if (fad:file-exists-p
-             (file-candidate-target cand))
-             "File already exists" "")))
+        (file-candidate-comment cand)))
+;;;         (if (fad:file-exists-p
+;;;              (file-candidate-target cand))
+;;;              "File already exists" "")))
 
 (defun color-file-candidate (lp candidate state)
   (declare (ignore lp))
   (when (eq state :normal)
-    (if (fad:file-exists-p
-         (file-candidate-target candidate))
-        :red
-        nil)))
+    (file-candidate-color candidate)))
+;;;     (if (fad:file-exists-p
+;;;          (file-candidate-target candidate))
+;;;         :red
+;;;         nil)))
 
 (defun edit-candidate-callback (item self)
   (with-slots (proposal-table) self

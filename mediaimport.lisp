@@ -9,7 +9,16 @@
 
 @export
 @export-accessors
-(defstruct file-candidate source target timestamp)
+(defclass file-candidate ()
+  ((source :accessor file-candidate-source :initarg :source)
+   (target :accessor file-candidate-target :initarg :target)
+   (timestamp :accessor file-candidate-timestamp :initarg :timestamp)))
+
+(defmethod print-object ((self file-candidate) out)
+  (print-unreadable-object (self out :type t)
+    (format out "~%   Source: ~s" (file-candidate-source self))
+    (format out "~%   Target: ~s" (file-candidate-target self))))
+
 
 (defstruct (datetime (:constructor create-datetime (year month date hour minute second))
                      (:constructor)) year month date hour minute second)
@@ -225,7 +234,7 @@ MEDIAIMPORT> (integer-format 11 3)
         (mapcar (lambda (x)
                   (multiple-value-bind (fname ts)
                       (construct-target-filename self x)
-                    (make-file-candidate
+                    (make-instance 'file-candidate
                      :source x
                      :target fname
                      :timestamp ts)))
@@ -337,10 +346,10 @@ with the same name, bump"
 
 ;;; Tests
 ;; (in-package :mediaimport)
-;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :new-extension "png"))
+;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :extensions "jpg" :new-extension "png"))
 
 ;; (construct-target-filename * "~/1/12442783_1081637521900005_512987139_n.jpg")
 
-;; (construct-target-filenames r)
+;; (pprint (construct-target-filenames r))
 
 
