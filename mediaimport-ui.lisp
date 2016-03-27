@@ -42,7 +42,8 @@
                  (:title "Comments" 
                   :adjust :left 
                   :visible-min-width (character 45))))
-   (copy-button push-button :text "Copy..." :callback #'on-copy-button))
+   (copy-button push-button :text "Copy..." :callback #'on-copy-button)
+   (progress-bar progress-bar))
    (:layouts
     (input-output-layout grid-layout '(input-button input-directory-field
                                        output-button output-directory-field)
@@ -54,12 +55,14 @@
                        :columns 2 :rows 3
                        :x-adjust '(:left :right)
                        :y-adjust '(:center :center))
+    (progress-layout switchable-layout '(nil progress-bar))
     
     (main-layout column-layout '(input-output-layout
                                  extensions-layout
                                  collect-button
                                  proposal-table 
-                                 copy-button) :adjust :center))
+                                 copy-button
+                                 progress-layout) :adjust :center))
     
   (:default-initargs :title "Media Import"
    :visible-min-width 800
@@ -194,7 +197,7 @@
 
 (defun on-copy-button (data self)
   (declare (ignore data))
-  (with-slots (proposal-table) self
+  (with-slots (proposal-table progress-layout progress-bar) self
     ;; ask for confirmation
     (when (confirm-yes-or-no
            "Are you sure want to start copying?")
@@ -208,9 +211,47 @@
                    (or (not some-exists)
                        (confirm-yes-or-no
                         "Some existing files will be overwriten. Proceed anyway?")))
-          (display-message "Copying..."))))))
+          ;; ok first make progress-bar visible
+          (setf (switchable-layout-visible-child progress-layout) progress-bar)
+          ;; then set the range on the progress bar equal to the number of files
+          (setf (range-start progress-bar) 0
+                (range-end   progress-bar) (length items)
+                (range-slug-start progress-bar) 0)
+          ;; start worker thread
+          (mp:process-run-function "Copy files" nil #'copy-files-thread-fun self items))))))
+
+(defmethod copy-files-thread-fun ((self main-window) items)
+  (apply-in-pane-process self (lambda () (enable-interface self :enable nil)))
+  (dotimes (i (length items))
+    (sleep 1)
+    (apply-in-pane-process self
+                           (lambda ()
+                             (with-slots (progress-bar) self
+                               (setf (range-slug-start progress-bar) i)))))
+  (apply-in-pane-process self
+                         (lambda ()
+                           (with-slots (progress-layout progress-bar) self
+                             (setf (range-slug-start progress-bar) (length items))
+                             (setf (switchable-layout-visible-child progress-layout) nil)
+                             (enable-interface self :enable t)))))
+  
+(defmethod enable-interface ((self main-window) &key (enable t))
+  (with-slots (copy-button
+               collect-button
+               input-button
+               output-button
+               input-directory-field
+               output-directory-field) self
+    (setf (button-enabled copy-button) enable
+          (button-enabled collect-button) enable
+          (button-enabled input-button) enable
+          (button-enabled output-button) enable
+          (text-input-pane-enabled input-directory-field) enable
+          (text-input-pane-enabled output-directory-field) enable)))
 
 
+
+                         
 
 @export
 (defun main ()
