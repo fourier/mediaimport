@@ -296,21 +296,18 @@ with the same name, bump"
   (lw:copy-file from to)
   (values))
 
-(defmethod merge-files ((self renamer) &key delete-original recursive) 
-  (let ((files
-         (create-list-of-candidates self :recursive recursive))
-        (merge-fun (if delete-original #'rename-file #'copy-file)))
-    (format t "The list of files to be renamed:~%")
-    (dolist (f files)
-      (format t "~a =>~%~a~%" (file-candidate-source f) (file-candidate-target f)))
-    (when (yes-no (if delete-original "Rename files ?" "Copy files ?"))
-      (format t "~%~% Processing ...~%")
-      (dolist (f files)
-        (let ((from (file-candidate-source f))
-              (to (file-candidate-target f)))
-          (ensure-directories-exist (fad:pathname-directory-pathname to))
-          (funcall merge-fun from to)))
-      (format t "~% Done.~%"))))
+@export
+(defun copy-files (file-candidates &key callback)
+  (alexandria:map-iota
+   (lambda (i)
+     (let* ((cand (aref file-candidates i))
+            (from (file-candidate-source cand))
+            (to (file-candidate-target cand)))
+       (ensure-directories-exist (fad:pathname-directory-pathname to))
+       (copy-file from to)
+       (when callback
+         (funcall callback (1+ i)))))
+     (length file-candidates)))
 
 @export
 (defmethod create-list-of-candidates ((self renamer) &key recursive)

@@ -222,12 +222,16 @@
 
 (defmethod copy-files-thread-fun ((self main-window) items)
   (apply-in-pane-process self (lambda () (enable-interface self :enable nil)))
-  (dotimes (i (length items))
-    (sleep 1)
-    (apply-in-pane-process self
-                           (lambda ()
-                             (with-slots (progress-bar) self
-                               (setf (range-slug-start progress-bar) i)))))
+  (copy-files items
+              :callback (lambda (i)
+                          (apply-in-pane-process self
+                                                 (lambda ()
+                                                   (with-slots (progress-bar proposal-table) self
+                                                     (setf (range-slug-start progress-bar) i)
+                                                     (let ((item (aref items (1- i))))
+                                                       (setf (file-candidate-status item) 'copied)
+                                                       (update-candidate-status item)
+                                                       (redisplay-collection-item proposal-table item)))))))
   (apply-in-pane-process self
                          (lambda ()
                            (with-slots (progress-layout progress-bar) self
