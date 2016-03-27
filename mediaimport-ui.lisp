@@ -24,6 +24,7 @@
    (exif-checkbox check-button :text "Use EXIF for JPG")
    (input-ext text-input-pane :title "Comma-separated list of extension[s], like \"jpg,png\"" :text "jpg")
    (output-ext text-input-pane :title "Output extension" :visible-max-width 40)
+   (prefix text-input-pane :title "Prefix (like \"Photo-\"" :text "Photo-")
    (collect-button push-button :text "Collect data" :callback #'on-collect-button)
    (proposal-table multi-column-list-panel
       :visible-min-width 600
@@ -41,7 +42,7 @@
                  (:title "Comments" 
                   :adjust :left 
                   :visible-min-width (character 45))))
-   (copy-button push-button :text "Copy..."))
+   (copy-button push-button :text "Copy..." :callback #'on-copy-button))
    (:layouts
     (input-output-layout grid-layout '(input-button input-directory-field
                                        output-button output-directory-field)
@@ -49,8 +50,8 @@
                          :x-adjust '(:right :left)
                          :y-adjust '(:center :center))
     (extensions-layout grid-layout '(recursive-checkbox input-ext
-                                     exif-checkbox output-ext)
-                       :columns 2 :rows 2
+                                     exif-checkbox output-ext prefix nil)
+                       :columns 2 :rows 3
                        :x-adjust '(:left :right)
                        :y-adjust '(:center :center))
     
@@ -62,9 +63,12 @@
     
   (:default-initargs :title "Media Import"
    :visible-min-width 800
-   :layout 'main-layout))
+   :layout 'main-layout
+   :initial-focus 'input-directory-field))
 
-(defmethod initialize-instance :after ((self main-window) &key &allow-other-keys))
+(defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
+  (setf (button-enabled (slot-value self 'copy-button)) nil))
+
 
 (defclass file-candidate-item (file-candidate)
   ((color :accessor file-candidate-color :initarg :color :initform :black)
@@ -79,6 +83,9 @@
           ((eql status 'duplicate)
            (setf color :red
                  comment "Duplicate name"))
+          ((eql status 'copied)
+           (setf color :blue
+                 comment "Copied"))
           (t
            (setf color :black
                  comment "")))))
@@ -132,16 +139,20 @@
                output-directory-field
                input-ext
                output-ext
+               prefix
                recursive-checkbox
-               exif-checkbox) self
+               exif-checkbox
+               copy-button) self
       (let ((source-path (text-input-pane-text input-directory-field))
             (dest-path (text-input-pane-text output-directory-field)))
         (when (and (> (length source-path) 0) (> (length dest-path) 0))
           (let* ((extensions (text-input-pane-text input-ext))
                  (new-extension (text-input-pane-text output-ext))
+                 (prefix-text (text-input-pane-text prefix))
                  (r (make-instance 'renamer
                                    :source-path source-path
                                    :destination-path dest-path
+                                   :prefix prefix-text
                                    :extensions extensions
                                    :new-extension new-extension
                                    :use-exif (button-selected exif-checkbox)))
@@ -152,7 +163,8 @@
                   candidates)
             (update-candidates self candidates)
             (setf (collection-items proposal-table)
-                  candidates))))))
+                  candidates)
+            (setf (button-enabled copy-button) (> (length candidates) 0)))))))
 
 
 (defun file-candidate-to-row (cand)
@@ -178,6 +190,26 @@
           ;; update text
           (redisplay-collection-item proposal-table item)
           (update-candidates self (collection-items proposal-table)))))))
+
+
+(defun on-copy-button (data self)
+  (declare (ignore data))
+  (with-slots (proposal-table) self
+    ;; ask for confirmation
+    (when (confirm-yes-or-no
+           "Are you sure want to start copying?")
+      (let* ((items (collection-items proposal-table))
+             (some-dups (find-if (lambda (x) (eql (file-candidate-status x) 'duplicate)) items))
+             (some-exists (find-if (lambda (x) (eql (file-candidate-status x) 'exists)) items)))
+        ;; some sanity confirmations        
+        (when (and (or (not some-dups)
+                       (confirm-yes-or-no
+                        "Where are duplicates in targets. Proceed anyway?"))
+                   (or (not some-exists)
+                       (confirm-yes-or-no
+                        "Some existing files will be overwriten. Proceed anyway?")))
+          (display-message "Copying..."))))))
+
 
 
 @export
