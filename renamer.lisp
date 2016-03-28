@@ -130,7 +130,7 @@ MEDIAIMPORT> (integer-format 11 3)
   (let* ((dir (pathname-directory filename)) ; directory
          (basename (pathname-name filename)) ; filename w/o extension
          (ext (pathname-type filename))      ; extension
-         ;; possible numeric trailer like for "img10-1.jgp" it will be "1"
+         ;; possible numeric trailer like for "img10-1.jpg" it will be "1"
          (trailer (car (ppcre:all-matches-as-strings "-(\\d+$)" basename)))
          ;; number of digits in the new trailer. either 1 or as in old trailer
          (digits (if trailer (1- (length trailer)) 1))
@@ -142,9 +142,36 @@ MEDIAIMPORT> (integer-format 11 3)
                        (ppcre:regex-replace "-(\\d+$)" basename new-trailer)
                        (concatenate 'string basename new-trailer))))
     (make-pathname :directory dir :name new-name :type ext)))
-                     
-                                                    
-    
+
+
+(defun regexp-bumped-files (filename)
+  "Create a regular expression based on filename to identify the
+files with the same name as well as 'bumped' versions (ending
+with -1, -2 etc.
+
+Example:
+
+=> (regexp-bumped-files \"myfile.txt\")
+\"myfile(-(\\d+))?.(?i)txt$\"
+
+=> (remove-if-not
+ (lambda (x)
+   (ppcre:all-matches \"myfile(-(\\d+))?.(?i)txt$\" x))
+ '(\"myfile.txt\"
+   \"one.txt\"
+   \"myfile-2.txt\"
+   \"myfile-10.txt\"
+   \"myfile-07.TXT\"
+   \"some-othermyfile.txt\"))
+(\"myfile.txt\" \"myfile-2.txt\" \"myfile-10.txt\" \"myfile-07.TXT\")"
+  (let ((dir (pathname-directory filename))
+        (basename (pathname-name filename))
+        (ext (pathname-type filename)))
+    (concatenate 'string (if dir "/" "^")
+                 basename "(-(\\d+))?"
+                 (when ext (concatenate 'string ".(?i)" ext))
+                 "$")))
+  
 (defmethod construct-target-filenames ((self renamer) &key recursive)
   "TODO: document it"
   (with-slots (source-path extensions) self
@@ -179,9 +206,11 @@ Otherwise try to bump the file name until no file with the same name exists"
     ;; 1. Remove those candidates for which the target is already exists and
     ;;    the same
     (let ((fresh-new
-           (remove-if (lambda (cand) (and (fad:file-exists-p (file-candidate-target cand))
-                                          (check-if-equal (file-candidate-source cand)
-                                                          (file-candidate-target cand) checksums)))
+           (remove-if (lambda (cand)
+                        (and (fad:file-exists-p (file-candidate-target cand))
+                             (check-if-equal (file-candidate-source cand)
+                                             (file-candidate-target cand)
+                                             checksums)))
                       candidates)))
       fresh-new)))
 
@@ -204,6 +233,38 @@ with the same name, bump"
                 (let ((new-version (bump-file-name (file-candidate-target c))))
                   (setf (file-candidate-target c) new-version)))))
       new-candidates)))
+
+
+@export
+(defmethod create-list-of-candidates ((self renamer) &key recursive)
+  (let ((files
+         (bump-similar-candidates self
+          (verify-against-existing self
+           (construct-target-filenames self :recursive recursive)))))
+    files))
+
+(defun check-if-equal (filename1 filename2 &optional checksum-hash)
+  "Test if 2 files are equal.
+1. First verify their sizes;
+2. If sizes are the same, verify first 8kb of contents
+3. If the 1st 8kb are the same, compare checksums.
+If CHECKSUM-HASH table provided, try to lookup the checksum in
+this table first and add if not found"
+  (flet ((get-and-cache-checksum (fname)
+           (if (not checksum-hash) (ironclad:digest-file :sha1 fname)
+               (alexandria:if-let ((cached (gethash fname checksum-hash)))
+                   cached
+                 (setf (gethash fname checksum-hash)
+                       (ironclad:digest-file :sha1 fname))))))
+    ;; first check file sizes
+    (and (= (file-size filename1) (file-size filename2))
+         ;; next check first 8k
+         (equalp (read-header filename1 8192)
+                 (read-header filename2 8192))
+         ;; and after that we have to check checksum
+         (let ((cs1 (get-and-cache-checksum filename1))
+               (cs2 (get-and-cache-checksum filename1)))
+           (equalp cs1 cs2)))))
 
 
 (defun copy-file (from to)
@@ -242,38 +303,8 @@ In case of success 2nd argument is nil."
        (when callback
          (funcall callback i result))))
      (length file-candidates)))
-
-@export
-(defmethod create-list-of-candidates ((self renamer) &key recursive)
-  (let ((files
-         (bump-similar-candidates self
-          (verify-against-existing self
-           (construct-target-filenames self :recursive recursive)))))
-    files))
   
            
-(defun check-if-equal (filename1 filename2 &optional checksum-hash)
-  "Test if 2 files are equal.
-1. First verify their sizes;
-2. If sizes are the same, verify first 8kb of contents
-3. If the 1st 8kb are the same, compare checksums.
-If CHECKSUM-HASH table provided, try to lookup the checksum in
-this table first and add if not found"
-  (flet ((get-and-cache-checksum (fname)
-           (if (not checksum-hash) (ironclad:digest-file :sha1 fname)
-               (alexandria:if-let ((cached (gethash fname checksum-hash)))
-                   cached
-                 (setf (gethash fname checksum-hash)
-                       (ironclad:digest-file :sha1 fname))))))
-    ;; first check file sizes
-    (and (= (file-size filename1) (file-size filename2))
-         ;; next check first 8k
-         (equalp (read-header filename1 8192)
-                 (read-header filename2 8192))
-         ;; and after that we have to check checksum
-         (let ((cs1 (get-and-cache-checksum filename1))
-               (cs2 (get-and-cache-checksum filename1)))
-           (equalp cs1 cs2)))))
 
 @export
 (defun init()
