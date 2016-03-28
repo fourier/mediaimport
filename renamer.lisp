@@ -147,7 +147,7 @@ MEDIAIMPORT> (integer-format 11 3)
     
 (defmethod construct-target-filenames ((self renamer) &key recursive)
   "TODO: document it"
-  (with-slots (source-path destination-path extensions new-extension) self
+  (with-slots (source-path extensions) self
     (flet ((correct-extension (fname)
              (let ((ext (string-upcase (pathname-type fname))))
                (cond ((null extensions) t)
@@ -171,37 +171,39 @@ MEDIAIMPORT> (integer-format 11 3)
                      (remove-if-not #'correct-extension fnames)
                      fnames)))))))
 
-(defun verify-against-existing (candidates)
+(defmethod verify-against-existing ((self renamer) candidates)
   "Process the list of candidates and try to find existing files.
 If existing files are in place AND are the same, set the candidate name as nil.
 Otherwise try to bump the file name until no file with the same name exists"
-  ;; 1. Remove those candidates for which the target is already exists and
-  ;;    the same
-  (let ((fresh-new
-         (remove-if (lambda (cand) (and (fad:file-exists-p (file-candidate-target cand))
-                                        (check-if-equal (file-candidate-source cand)
-                                                        (file-candidate-target cand))))
-                    candidates)))
-    fresh-new))
+  (with-slots (checksums) self
+    ;; 1. Remove those candidates for which the target is already exists and
+    ;;    the same
+    (let ((fresh-new
+           (remove-if (lambda (cand) (and (fad:file-exists-p (file-candidate-target cand))
+                                          (check-if-equal (file-candidate-source cand)
+                                                          (file-candidate-target cand) checksums)))
+                      candidates)))
+      fresh-new)))
 
-(defun bump-similar-candidates (candidates)
-"For each candidate
+(defmethod bump-similar-candidates ((self renamer) candidates)
+  "For each candidate
 while target exists and not the same or there is another candidate
 with the same name, bump"
-  (let ((new-candidates (copy-list candidates)))
-    (dolist (c new-candidates)
-      (let ((from (file-candidate-source c)))
-        (loop while (or (and (fad:file-exists-p (file-candidate-target c))
-                             (not (check-if-equal from (file-candidate-target c))))
-                        (find-if (lambda (x)
-                                   (and 
-                                   (string-equal (namestring (file-candidate-target x)) (namestring (file-candidate-target c)))
-                                   (not (string-equal (namestring (file-candidate-source x)) (namestring (file-candidate-source c))))))
-                                 new-candidates))
-           do
-             (let ((new-version (bump-file-name (file-candidate-target c))))
-               (setf (file-candidate-target c) new-version)))))
-    new-candidates))
+  (with-slots (checksums) self
+    (let ((new-candidates (copy-list candidates)))
+      (dolist (c new-candidates)
+        (let ((from (file-candidate-source c)))
+          (loop while (or (and (fad:file-exists-p (file-candidate-target c))
+                               (not (check-if-equal from (file-candidate-target c) checksums)))
+                          (find-if (lambda (x)
+                                     (and 
+                                      (string-equal (namestring (file-candidate-target x)) (namestring (file-candidate-target c)))
+                                      (not (string-equal (namestring (file-candidate-source x)) (namestring (file-candidate-source c))))))
+                                   new-candidates))
+                do
+                (let ((new-version (bump-file-name (file-candidate-target c))))
+                  (setf (file-candidate-target c) new-version)))))
+      new-candidates)))
 
 
 (defun copy-file (from to)
@@ -244,23 +246,34 @@ In case of success 2nd argument is nil."
 @export
 (defmethod create-list-of-candidates ((self renamer) &key recursive)
   (let ((files
-         (bump-similar-candidates
-          (verify-against-existing
+         (bump-similar-candidates self
+          (verify-against-existing self
            (construct-target-filenames self :recursive recursive)))))
     files))
   
            
-
-(defun check-if-equal (filename1 filename2)
-  ;; first check file sizes
-  (and (= (file-size filename1) (file-size filename2))
-       ;; next check first 8k
-       (equalp (read-header filename1 8192)
-               (read-header filename2 8192))
-       ;; and after that we have to check checksum
-       (let ((cs1 (ironclad:digest-file :sha1 filename1))
-             (cs2 (ironclad:digest-file :sha1 filename2)))
-         (equalp cs1 cs2))))
+(defun check-if-equal (filename1 filename2 &optional checksum-hash)
+  "Test if 2 files are equal.
+1. First verify their sizes;
+2. If sizes are the same, verify first 8kb of contents
+3. If the 1st 8kb are the same, compare checksums.
+If CHECKSUM-HASH table provided, try to lookup the checksum in
+this table first and add if not found"
+  (flet ((get-and-cache-checksum (fname)
+           (if (not checksum-hash) (ironclad:digest-file :sha1 fname)
+               (alexandria:if-let ((cached (gethash fname checksum-hash)))
+                   cached
+                 (setf (gethash fname checksum-hash)
+                       (ironclad:digest-file :sha1 fname))))))
+    ;; first check file sizes
+    (and (= (file-size filename1) (file-size filename2))
+         ;; next check first 8k
+         (equalp (read-header filename1 8192)
+                 (read-header filename2 8192))
+         ;; and after that we have to check checksum
+         (let ((cs1 (get-and-cache-checksum filename1))
+               (cs2 (get-and-cache-checksum filename1)))
+           (equalp cs1 cs2)))))
 
 @export
 (defun init()
