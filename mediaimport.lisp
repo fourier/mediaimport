@@ -293,20 +293,36 @@ with the same name, bump"
   (fad:copy-file from to :overwrite t)
   ;; only starting from 6.1
   #+:lispworks
-  (lw:copy-file from to)
-  (values))
+  (lw:copy-file from to))
+
 
 @export
 (defun copy-files (file-candidates &key callback)
+  "Copy files from array FILE-CANDIDATES of type file-candidate.
+CALLBACK could be nil; if not nil, CALLBACK is a function which
+is called every time file copied.
+CALLBACK is a function of 2 arguments: index of the element in the
+FILE-CANDIDATES array and a string error-text if an error happened.
+In case of success 2nd argument is nil."
   (alexandria:map-iota
    (lambda (i)
+     (sleep 0.5)
      (let* ((cand (aref file-candidates i))
             (from (file-candidate-source cand))
-            (to (file-candidate-target cand)))
-       (ensure-directories-exist (fad:pathname-directory-pathname to))
-       (copy-file from to)
+            (to (file-candidate-target cand))
+            (result
+             ;; result will contain either a nil or a error message
+             (handler-case
+                 (progn 
+                   (ensure-directories-exist (fad:pathname-directory-pathname to))
+                   (copy-file from to)
+                   nil)
+               (file-error (err)
+                 (with-output-to-string (s)
+                   (format s "~a" err))))))
+       ;; if callback function is provided, call it
        (when callback
-         (funcall callback (1+ i)))))
+         (funcall callback i result))))
      (length file-candidates)))
 
 @export

@@ -86,6 +86,9 @@
           ((eql status 'duplicate)
            (setf color :red
                  comment "Duplicate name"))
+          ((eql status 'error)
+           (setf color :red1
+                 comment "Error"))
           ((eql status 'copied)
            (setf color :blue
                  comment "Copied"))
@@ -221,25 +224,38 @@
           (mp:process-run-function "Copy files" nil #'copy-files-thread-fun self items))))))
 
 (defmethod copy-files-thread-fun ((self main-window) items)
-  (apply-in-pane-process self (lambda () (enable-interface self :enable nil)))
-  (copy-files items
-              :callback (lambda (i)
-                          (apply-in-pane-process self
-                                                 (lambda ()
-                                                   (with-slots (progress-bar proposal-table) self
-                                                     (setf (range-slug-start progress-bar) i)
-                                                     (let ((item (aref items (1- i))))
-                                                       (setf (file-candidate-status item) 'copied)
-                                                       (update-candidate-status item)
-                                                       (redisplay-collection-item proposal-table item)))))))
-  (apply-in-pane-process self
-                         (lambda ()
-                           (with-slots (progress-layout progress-bar) self
-                             (setf (range-slug-start progress-bar) (length items))
-                             (setf (switchable-layout-visible-child progress-layout) nil)
-                             (enable-interface self :enable t)))))
-  
+  "Worker function to copy files. ITEMS is an array of FILE-CANDIDATE-ITEMs."
+  (flet ((copy-files-callback (i &optional error-text)
+           ;; a callback provided to copy-files function from mediaimport package.
+           ;; it updates the progress bar and updates the file status/color
+           (apply-in-pane-process self
+                                  (lambda ()
+                                    (with-slots (progress-bar proposal-table)
+                                        self
+                                      (let ((item (aref items i)))
+                                        (setf (range-slug-start progress-bar) (1+ i))
+                                        (setf (file-candidate-status item)
+                                              (if error-text 'error 'copied))
+                                        (update-candidate-status item)
+                                        (when error-text
+                                          (setf (file-candidate-comment item)
+                                                error-text))
+                                        (redisplay-collection-item proposal-table item)))))))           
+    ;; first disable all buttons
+    (apply-in-pane-process self (lambda () (enable-interface self :enable nil)))
+    ;; copy files with our callback
+    (copy-files items :callback #'copy-files-callback)
+    ;; and finally update progress, hide it and enable all buttons
+    (apply-in-pane-process self
+                           (lambda ()
+                             (with-slots (progress-layout progress-bar) self
+                               (setf (range-slug-start progress-bar) (length items))
+                               (setf (switchable-layout-visible-child progress-layout) nil)
+                               (enable-interface self :enable t))))))
+
 (defmethod enable-interface ((self main-window) &key (enable t))
+  "Enable or disable buttons and input fields. Called when some
+background operations happened"                                                
   (with-slots (copy-button
                collect-button
                input-button

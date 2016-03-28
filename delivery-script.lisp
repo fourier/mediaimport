@@ -29,5 +29,6 @@
                  (write-macos-application-bundle
                    "~/Sources/lisp/mediaimport/build/mediaimport"))
          5
-         :interface :capi)
+         :interface :capi
+         :startup-bitmap-file nil)
 
