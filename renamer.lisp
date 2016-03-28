@@ -1,14 +1,13 @@
 ;;;; mediaimport.lisp
 (defpackage #:mediaimport.renamer
-  (:use #:cl #:cl-annot.class #:mediaimport.utils))
+  (:use #:cl #:cl-annot.class #:mediaimport.utils #:mediaimport.datetime))
 
 (in-package #:mediaimport.renamer)
 (annot:enable-annot-syntax)
 
 ;;; "mediaimport" goes here. Hacks and glory await!
 
-@export
-@export-accessors
+@export-class
 (defclass file-candidate ()
   ((source :accessor file-candidate-source :initarg :source
            :documentation "Source file (file to copy)")
@@ -32,7 +31,8 @@ the input and output file name as well as the source file timestamp"))
                       (prefix :initform nil :initarg :prefix)
                       (extensions :initform nil :initarg :extensions)
                       (new-extension :initform nil :initarg :new-extension)
-                      (use-exif :initform nil :initarg :use-exif)))
+                      (use-exif :initform nil :initarg :use-exif)
+                      (checksums :initform (make-hash-table :test #'equal))))
 
 (defmethod initialize-instance :after ((self renamer) &key)
   (with-slots (source-path destination-path extensions new-extension) self
@@ -270,13 +270,11 @@ In case of success 2nd argument is nil."
   (lw:set-default-character-element-type 'lw:bmp-char))
 
 
-
 ;;; Tests
 ;; (in-package :mediaimport.renamer)
 ;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :extensions "jpg" :new-extension "png"))
-
 ;; (construct-target-filename * "~/1/12442783_1081637521900005_512987139_n.jpg")
-
 ;; (pprint (construct-target-filenames r))
+;; (pprint (create-list-of-candidates r))
 
 
