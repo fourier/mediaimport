@@ -152,25 +152,30 @@
       (let ((source-path (text-input-pane-text input-directory-field))
             (dest-path (text-input-pane-text output-directory-field)))
         (when (and (> (length source-path) 0) (> (length dest-path) 0))
-          (let* ((extensions (text-input-pane-text input-ext))
-                 (new-extension (text-input-pane-text output-ext))
-                 (prefix-text (text-input-pane-text prefix))
-                 (r (make-instance 'renamer
-                                   :source-path source-path
-                                   :destination-path dest-path
-                                   :prefix prefix-text
-                                   :extensions extensions
-                                   :new-extension new-extension
-                                   :use-exif (button-selected exif-checkbox)))
-                 (candidates (create-list-of-candidates r
-                                                        :recursive (button-selected recursive-checkbox))))
-            (mapc (lambda (cand)
-                    (change-class cand 'file-candidate-item))
-                  candidates)
-            (update-candidates self candidates)
-            (setf (collection-items proposal-table)
-                  candidates)
-            (setf (button-enabled copy-button) (> (length candidates) 0)))))))
+          (cond ((not (directory-exists-p source-path))
+                 (display-message "Directory ~s doesn't exist" source-path))
+                ((not (directory-exists-p dest-path))
+                 (display-message "Directory ~s doesn't exist" dest-path))
+                (t 
+                 (let* ((extensions (text-input-pane-text input-ext))
+                        (new-extension (text-input-pane-text output-ext))
+                        (prefix-text (text-input-pane-text prefix))
+                        (r (make-instance 'renamer
+                                          :source-path source-path
+                                          :destination-path dest-path
+                                          :prefix prefix-text
+                                          :extensions extensions
+                                          :new-extension new-extension
+                                          :use-exif (button-selected exif-checkbox)))
+                        (candidates (create-list-of-candidates r
+                                                               :recursive (button-selected recursive-checkbox))))
+                   (mapc (lambda (cand)
+                           (change-class cand 'file-candidate-item))
+                         candidates)
+                   (update-candidates self candidates)
+                   (setf (collection-items proposal-table)
+                         candidates)
+                   (setf (button-enabled copy-button) (> (length candidates) 0)))))))))
 
 
 (defun file-candidate-to-row (cand)

@@ -38,6 +38,14 @@ read up to the size of file"
         buffer))))
 
 
+@export
+(defun directory-exists-p (dirname)
+  "Return T if DIRNAME specifies an existing directory.
+Suppress all errors and returns NIL otherwise"
+  (handler-case
+      (fad:directory-exists-p dirname)
+    (error (err) nil)))
+
 
 @export
 (defclass duplicate-finder () ((items :initarg :items)
