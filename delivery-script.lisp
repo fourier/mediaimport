@@ -24,7 +24,7 @@
 ;;; to create the bundle.
 (compile-file (sys:example-file "configuration/macos-application-bundle.lisp") :load t)
 
-(deliver 'mediaimport-ui:main 
+(deliver 'mediaimport.ui:main 
          (when (save-argument-real-p)
                  (write-macos-application-bundle
                    "~/Sources/lisp/mediaimport/build/mediaimport"))

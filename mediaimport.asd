@@ -11,7 +11,7 @@
                #:cl-annot
                #:zpb-exif)
   :serial t
-  :components ((:file "mediaimport-utils")
-               (:file "mediaimport")
-               (:file "mediaimport-ui")))
+  :components ((:file "utils")
+               (:file "renamer")
+               (:file "ui")))
 

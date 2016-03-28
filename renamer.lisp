@@ -1,8 +1,8 @@
 ;;;; mediaimport.lisp
-(defpackage #:mediaimport
-  (:use #:cl #:cl-annot.class #:mediaimport-utils))
+(defpackage #:mediaimport.renamer
+  (:use #:cl #:cl-annot.class #:mediaimport.utils))
 
-(in-package #:mediaimport)
+(in-package #:mediaimport.renamer)
 (annot:enable-annot-syntax)
 
 ;;; "mediaimport" goes here. Hacks and glory await!
@@ -57,31 +57,6 @@ the input and output file name as well as the source file timestamp"))
                             (string-trim " " new-extension)))))
 
   
-(defun timestamp-from-file (filename)
-  (multiple-value-bind (second minute hour date month year)
-      (decode-universal-time (file-write-date filename))
-    (make-datetime :year year :month month :date date
-                   :hour hour :minute minute :second second)))
-
-
-(defun timestamp-from-exif (filename)
-  (handler-case
-      (let* ((exif (zpb-exif:make-exif (truename filename)))
-             (dto (zpb-exif:exif-value :DateTimeOriginal exif))
-             ;; "2012:01:23 00:17:40"
-             (dt (zpb-exif:exif-value :DateTime exif))
-             ;; "2012:01:23 00:17:40"
-             (gds (zpb-exif:exif-value :GPSDateStamp exif))
-             ;;"2015:06:09"
-             (gts (zpb-exif:exif-value :GPSTimeStamp exif)))
-        ;; #(18 29 299/10)
-        ;; logic the flowing:
-        (cond ((or dto dt) ;; if DateTimeOriginal or DateTime, use it
-               (make-datetime-from-string (or dto dt)))
-              ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
-               (make-datetime-from-gps-timestamps gds gts))))
-    (zpb-exif:invalid-exif-stream (err) nil)))
-
 
 (defun timestamp-based-filename (filename timestamp
                                           &key
@@ -120,8 +95,8 @@ Example:
     (let* ((ext (string-upcase (pathname-type input-filename)))
            (timestamp (or (and (equal ext "JPG")
                                use-exif
-                               (timestamp-from-exif input-filename))
-                          (timestamp-from-file input-filename)))
+                               (make-datetime-from-exif input-filename))
+                          (make-datetime-from-file input-filename)))
            (fname (timestamp-based-filename input-filename
                                             timestamp
                                             :new-ext new-extension
@@ -297,7 +272,7 @@ In case of success 2nd argument is nil."
 
 
 ;;; Tests
-;; (in-package :mediaimport)
+;; (in-package :mediaimport.renamer)
 ;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :extensions "jpg" :new-extension "png"))
 
 ;; (construct-target-filename * "~/1/12442783_1081637521900005_512987139_n.jpg")

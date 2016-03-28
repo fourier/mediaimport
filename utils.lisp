@@ -1,15 +1,15 @@
 ;;;; mediaimport.lisp
-(defpackage #:mediaimport-utils
+(defpackage #:mediaimport.utils
   (:use #:cl #:cl-annot.class))
 
-(in-package #:mediaimport-utils)
+(in-package #:mediaimport.utils)
 (annot:enable-annot-syntax)
 
 
-@export
-@export-accessors
+@export-structure
 (defstruct (datetime (:constructor create-datetime (year month date hour minute second))
-                     (:constructor))
+                     ;(:constructor)
+                     )
   "Simple date/time structure"
   year month date hour minute second)
 
@@ -47,6 +47,32 @@ The GPSTimeStamp is in format like #(18 29 299/10)"
     (apply #'create-datetime parsed-numbers)))
 
 
+@export
+(defun make-datetime-from-file (filename)
+  (multiple-value-bind (second minute hour date month year)
+      (decode-universal-time (file-write-date filename))
+    (make-datetime :year year :month month :date date
+                   :hour hour :minute minute :second second)))
+
+@export
+(defun make-datetime-from-exif (filename)
+  (handler-case
+      (let* ((exif (zpb-exif:make-exif (truename filename)))
+             (dto (zpb-exif:exif-value :DateTimeOriginal exif))
+             ;; "2012:01:23 00:17:40"
+             (dt (zpb-exif:exif-value :DateTime exif))
+             ;; "2012:01:23 00:17:40"
+             (gds (zpb-exif:exif-value :GPSDateStamp exif))
+             ;;"2015:06:09"
+             (gts (zpb-exif:exif-value :GPSTimeStamp exif)))
+        ;; #(18 29 299/10)
+        ;; logic the flowing:
+        (cond ((or dto dt) ;; if DateTimeOriginal or DateTime, use it
+               (make-datetime-from-string (or dto dt)))
+              ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
+               (make-datetime-from-gps-timestamps gds gts))))
+    (zpb-exif:invalid-exif-stream (err) nil)))
+
 
 @export
 (defun interleave (list1 list2)
@@ -62,12 +88,13 @@ Example:
              (setf parity (not parity))))
     result))
 
-
+@export
 (defun file-size (filename)
   "Return the size of the file with the name FILENAME in bytes"
   (with-open-file (in filename :element-type '(unsigned-byte 8))
     (file-length in)))
 
+@export
 (defun read-header (filename size)
   "Read SIZE bytes from the file FILENAME. If the file size is less than SIZE,
 read up to the size of file"
