@@ -365,15 +365,17 @@ In case of success 2nd argument is nil."
             (to (file-candidate-target cand))
             (result
              ;; result will contain either a nil or a error message
-             (handler-case
-                 (progn 
-                   (ensure-directories-exist (fad:pathname-directory-pathname to))
-                   (copy-file from to)
-                   nil)
-               (file-error (err)
-                 (with-output-to-string (s)
-                   (format s "~a" err))))))
-       ;; if callback function is provided, call it
+             (if to
+                 (handler-case
+                     (progn 
+                       (ensure-directories-exist (fad:pathname-directory-pathname to))
+                       (copy-file from to)
+                       nil)
+                   (file-error (err)
+                     (with-output-to-string (s)
+                       (format s "~a" err))))
+                 t)))
+            ;; if callback function is provided, call it
        (when callback
          (funcall callback i result))))
      (length file-candidates)))
