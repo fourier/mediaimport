@@ -91,6 +91,8 @@
           ((eql status 'copied)
            (setf color :blue
                  comment "Copied"))
+          ((eql status 'skip)
+           (setf color :grey))
           (t
            (setf color :black
                  comment "")))))
@@ -98,17 +100,18 @@
 (defun update-candidate (cand duplicates redisplay-function)
   (let ((old-status (file-candidate-status cand))
         (target (file-candidate-target cand)))
-    ;; only make sense for non-nil targets
-    (when target
+    (if target
+        ;; only make sense for non-nil targets
       (cond ((fad:file-exists-p target)
              (setf (file-candidate-status cand) 'exists))
             ((duplicate-p duplicates (namestring target))
              (setf (file-candidate-status cand) 'duplicate))
             (t
              (setf (file-candidate-status cand) nil)))
+        (setf (file-candidate-status cand) 'skip))
       (unless (eql old-status (file-candidate-status cand))
         (update-candidate-status cand)
-        (funcall redisplay-function cand)))))
+        (funcall redisplay-function cand))))
   
 
 (defmethod update-candidates ((self main-window) candidates)
