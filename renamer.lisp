@@ -1,6 +1,7 @@
 ;;;; mediaimport.lisp
 (defpackage #:mediaimport.renamer
-  (:use #:cl #:cl-annot.class #:mediaimport.utils #:mediaimport.datetime))
+  (:use #:cl #:cl-annot.class #:alexandria
+   #:mediaimport.utils #:mediaimport.datetime))
 
 (in-package #:mediaimport.renamer)
 (annot:enable-annot-syntax)
@@ -143,6 +144,33 @@ MEDIAIMPORT> (integer-format 11 3)
                        (concatenate 'string basename new-trailer))))
     (make-pathname :directory dir :name new-name :type ext)))
 
+(defun get-new-maximum-file-version (filenames)
+  "By given the FILENAMES - list of file names of the same filemask,
+like
+ '(\"/Users/alexeyv/2/2016-03-13/Photo-18_36-1.jpg\"
+  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-2.jpg\"
+  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-3.jpg\"
+  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-4.jpg\"
+  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-5.jpg\"
+  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-6.jpg\"
+  \"/Users/alexeyv/2/2016-03-13/Photo-18_36.jpg\")
+return the maximum of versions or nil:
+  6"
+  (let ((trailers
+         ;; remove "-" and convert to integers
+         (mapcar (compose #'parse-integer (lambda (x) (subseq x 1)))
+                 ;; remove nulls
+                 (remove-if #'null
+                            ;; parse pathnames extracting -number like -1
+                            (mapcar
+                             (compose #'car
+                                      (curry #'ppcre:all-matches-as-strings "-(\\d+$)")
+                                      #'pathname-name)
+                             filenames)))))
+    (if (not trailers)
+        nil
+        (apply #'max trailers))))
+                   
 
 (defun regexp-bumped-files (filename)
   "Create a regular expression based on filename to identify the
@@ -171,7 +199,21 @@ Example:
                  basename "(-(\\d+))?"
                  (when ext (concatenate 'string ".(?i)" ext))
                  "$")))
-  
+
+(defun find-similar-files (filename)
+  "Using the FILENAME try to create a list of similar files from
+the directory where the FILENAME is located. It could be the same
+file or bumped files based on FILENAME"
+  (when-let (dir
+             (fad:directory-exists-p
+              (make-pathname :directory (pathname-directory filename))))
+    (let ((files (mapcar #'namestring (fad:list-directory dir)))
+          (regex (regexp-bumped-files filename)))
+      (remove-if-not (lambda (x)
+                       (ppcre:scan regex x))
+                     files))))
+
+
 (defmethod construct-target-filenames ((self renamer) &key recursive)
   "TODO: document it"
   (with-slots (source-path extensions) self
@@ -252,7 +294,7 @@ If CHECKSUM-HASH table provided, try to lookup the checksum in
 this table first and add if not found"
   (flet ((get-and-cache-checksum (fname)
            (if (not checksum-hash) (ironclad:digest-file :sha1 fname)
-               (alexandria:if-let ((cached (gethash fname checksum-hash)))
+               (if-let ((cached (gethash fname checksum-hash)))
                    cached
                  (setf (gethash fname checksum-hash)
                        (ironclad:digest-file :sha1 fname))))))
@@ -284,7 +326,7 @@ is called every time file copied.
 CALLBACK is a function of 2 arguments: index of the element in the
 FILE-CANDIDATES array and a string error-text if an error happened.
 In case of success 2nd argument is nil."
-  (alexandria:map-iota
+  (map-iota
    (lambda (i)
      (let* ((cand (aref file-candidates i))
             (from (file-candidate-source cand))
