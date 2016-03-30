@@ -127,7 +127,27 @@ MEDIAIMPORT> (integer-format 11 3)
     (with-output-to-string (s)
       (format s fmt number))))
 
-(defun bump-file-name (filename)
+(defun bump-file-name (filename &optional new-version)
+  "Returns a bumped file name by given FILENAME. Bumped means
+added '-version' to the end of the filename (before extension).
+
+If NEW-VERSION provided use this instead of increasing original.
+Examples:
+
+=> (bump-file-name \"myfile.txt\")
+#P\"myfile-1.txt\"
+
+=> (bump-file-name \"myfile-1.txt\")
+#P\"myfile-2.txt\"
+
+=> (bump-file-name \"myfile-10.txt\")
+#P\"myfile-11.txt\"
+
+=> (bump-file-name \"myfile-10.txt\" 2)
+#P\"myfile-02.txt\"
+
+=> (bump-file-name \"myfile-10.txt\" 100)
+#P\"myfile-100.txt\""
   (let* ((dir (pathname-directory filename)) ; directory
          (basename (pathname-name filename)) ; filename w/o extension
          (ext (pathname-type filename))      ; extension
@@ -135,8 +155,12 @@ MEDIAIMPORT> (integer-format 11 3)
          (trailer (car (ppcre:all-matches-as-strings "-(\\d+$)" basename)))
          ;; number of digits in the new trailer. either 1 or as in old trailer
          (digits (if trailer (1- (length trailer)) 1))
-         ;; version bump, if trailer found, increase it, otherwise just 1
-         (bump (if trailer (1+ (parse-integer (subseq trailer 1))) 1))
+         ;; version bump:
+         (bump (cond (new-version new-version) ;; either provided
+                     ;; or if trailer found, increase it
+                     (trailer (1+ (parse-integer (subseq trailer 1))))
+                     ;; otherwise just 1
+                     (t 1)))
          (new-trailer (concatenate 'string "-"
                                    (integer-format bump digits)))
          (new-name (if trailer
@@ -147,13 +171,13 @@ MEDIAIMPORT> (integer-format 11 3)
 (defun get-new-maximum-file-version (filenames)
   "By given the FILENAMES - list of file names of the same filemask,
 like
- '(\"/Users/alexeyv/2/2016-03-13/Photo-18_36-1.jpg\"
-  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-2.jpg\"
-  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-3.jpg\"
-  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-4.jpg\"
-  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-5.jpg\"
-  \"/Users/alexeyv/2/2016-03-13/Photo-18_36-6.jpg\"
-  \"/Users/alexeyv/2/2016-03-13/Photo-18_36.jpg\")
+ '(\"/Users/username/2/2016-03-13/Photo-18_36-1.jpg\"
+  \"/Users/username/2/2016-03-13/Photo-18_36-2.jpg\"
+  \"/Users/username/2/2016-03-13/Photo-18_36-3.jpg\"
+  \"/Users/username/2/2016-03-13/Photo-18_36-4.jpg\"
+  \"/Users/username/2/2016-03-13/Photo-18_36-5.jpg\"
+  \"/Users/username/2/2016-03-13/Photo-18_36-6.jpg\"
+  \"/Users/username/2/2016-03-13/Photo-18_36.jpg\")
 return the maximum of versions or nil:
   6"
   (let ((trailers
