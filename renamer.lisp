@@ -15,7 +15,9 @@
    (target :accessor file-candidate-target :initarg :target
            :documentation "Target file (file to copy to)")
    (timestamp :accessor file-candidate-timestamp :initarg :timestamp
-           :documentation "Timestamp of the source file"))
+           :documentation "Timestamp of the source file")
+   (comment :accessor file-candidate-comment :initarg :comment :initform ""
+           :documentation "Comments, i.e. if the similar file already exists"))
   (:documentation "File Candidate is a struct holding information about
 the input and output file name as well as the source file timestamp"))
 
@@ -23,7 +25,8 @@ the input and output file name as well as the source file timestamp"))
   "Print overload for FILE-CANDIDATE class"
   (print-unreadable-object (self out :type t)
     (format out "~%   Source: ~s" (file-candidate-source self))
-    (format out "~%   Target: ~s" (file-candidate-target self))))
+    (format out "~%   Target: ~s" (file-candidate-target self))
+    (format out "~%   Comment: ~s" (file-candidate-comment self))))
 
 
 @export
@@ -271,14 +274,19 @@ Otherwise try to bump the file name until no file with the same name exists"
   (with-slots (checksums) self
     ;; 1. Remove those candidates for which the target is already exists and
     ;;    the same
-    (let ((fresh-new
-           (remove-if (lambda (cand)
-                        (and (fad:file-exists-p (file-candidate-target cand))
-                             (check-if-equal (file-candidate-source cand)
-                                             (file-candidate-target cand)
-                                             checksums)))
-                      candidates)))
-      fresh-new)))
+    (dolist (cand candidates)
+      ;; find the list of similar files
+      (when-let* ((similar (find-similar-files (file-candidate-target cand)))
+                  (found (some (lambda (x) (and (check-if-equal
+                                                 (file-candidate-source cand)
+                                                 x
+                                                 checksums) x))
+                               similar)))
+        (setf (file-candidate-target cand) nil)
+        (setf (file-candidate-comment cand)
+              (concatenate 'string "Same as: " found))))
+    candidates))
+              
 
 (defmethod bump-similar-candidates ((self renamer) candidates)
   "For each candidate
