@@ -96,23 +96,27 @@
                  comment "")))))
 
 (defun update-candidate (cand duplicates redisplay-function)
-  (let ((old-status (file-candidate-status cand)))
-    (cond ((fad:file-exists-p
-            (file-candidate-target cand))
-           (setf (file-candidate-status cand) 'exists))
-          ((duplicate-p duplicates (namestring (file-candidate-target cand)))
-           (setf (file-candidate-status cand) 'duplicate))
-          (t
-           (setf (file-candidate-status cand) nil)))
-    (unless (eql old-status (file-candidate-status cand))
-      (update-candidate-status cand)
-      (funcall redisplay-function cand))))
+  (let ((old-status (file-candidate-status cand))
+        (target (file-candidate-target cand)))
+    ;; only make sense for non-nil targets
+    (when target
+      (cond ((fad:file-exists-p target)
+             (setf (file-candidate-status cand) 'exists))
+            ((duplicate-p duplicates (namestring target))
+             (setf (file-candidate-status cand) 'duplicate))
+            (t
+             (setf (file-candidate-status cand) nil)))
+      (unless (eql old-status (file-candidate-status cand))
+        (update-candidate-status cand)
+        (funcall redisplay-function cand)))))
   
 
 (defmethod update-candidates ((self main-window) candidates)
   (with-slots (duplicates proposal-table) self
     (setf duplicates (make-instance 'duplicate-finder
-                                      :items candidates
+                                    ;; only check duplicates for not-nil targets
+                                      :items (remove-if (alexandria:compose #'null #'file-candidate-target)
+                                                         candidates)
                                       :key (alexandria:compose #'namestring #'file-candidate-target)))
     ;; map over sequence - candidates could be a list or vector
     (map nil (lambda (cand)
@@ -178,9 +182,10 @@
 
 
 (defun file-candidate-to-row (cand)
-  (list (file-candidate-source cand)
-        (file-candidate-target cand)
-        (file-candidate-comment cand)))
+  (let ((target (file-candidate-target cand)))
+    (list (file-candidate-source cand)
+          (if target target "(skip)")
+          (file-candidate-comment cand))))
 
 (defun color-file-candidate (lp candidate state)
   (declare (ignore lp))

@@ -21,6 +21,17 @@ Example:
     result))
 
 @export
+(defun partition (seq predicate)
+  "Split the SEQ of type list by PREDICATE, returning the VALUES,
+where 1st value is the list of elements for which PREDICATE is true,
+and 2nd is the list of elements for which PREDICATE is false."
+  (let ((pos (remove-if-not predicate seq))
+        (neg (delete-if predicate seq)))
+    (values pos neg)))
+    
+
+
+@export
 (defun file-size (filename)
   "Return the size of the file with the name FILENAME in bytes"
   (with-open-file (in filename :element-type '(unsigned-byte 8))

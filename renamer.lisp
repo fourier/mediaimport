@@ -171,7 +171,7 @@ Examples:
                        (concatenate 'string basename new-trailer))))
     (make-pathname :directory dir :name new-name :type ext)))
 
-(defun get-new-maximum-file-version (filenames)
+(defun get-maximum-file-version (filenames)
   "By given the FILENAMES - list of file names of the same filemask,
 like
  '(\"/Users/username/2/2016-03-13/Photo-18_36-1.jpg\"
@@ -268,46 +268,56 @@ file or bumped files based on FILENAME"
                      fnames)))))))
 
 (defmethod verify-against-existing ((self renamer) candidates)
-  "Process the list of candidates and try to find existing files.
+  "Process the list of CANDIDATES and try to find existing files.
 If existing files are in place AND are the same, set the candidate name as nil.
-Otherwise try to bump the file name until no file with the same name exists"
+Otherwise try to bump the file name until no file with the same name exists.
+After this operation CANDIDATES will contain targets either nil or non-existing
+file names."
   (with-slots (checksums) self
     ;; 1. Remove those candidates for which the target is already exists and
     ;;    the same
     (dolist (cand candidates)
-      ;; find the list of similar files
-      (when-let* ((similar (find-similar-files (file-candidate-target cand)))
-                  (found (some (lambda (x) (and (check-if-equal
+      (let ((target (file-candidate-target cand)))
+        ;; find the list of similar files
+        (when-let (similar (find-similar-files target))
+          ;; some existing files are similar. Try to find those who are the same
+          (if-let (found (some (lambda (x) (and (check-if-equal
                                                  (file-candidate-source cand)
                                                  x
                                                  checksums) x))
-                               similar)))
-        (setf (file-candidate-target cand) nil)
-        (setf (file-candidate-comment cand)
-              (concatenate 'string "Same as: " found))))
+                               similar))
+              ;; found, clean the target and set appropriate comment
+              (setf (file-candidate-target cand) nil
+                    (file-candidate-comment cand)
+                    (concatenate 'string "Same as: " found))
+            ;; all existing are not the same as our target. Bump it then!
+            (setf (file-candidate-target cand)
+                  (bump-file-name target (1+ (get-maximum-file-version similar))))))))
     candidates))
               
 
 (defmethod bump-similar-candidates ((self renamer) candidates)
-  "For each candidate
-while target exists and not the same or there is another candidate
-with the same name, bump"
+  "For each candidate if there is another candidates with the same name, bump
+all of them"
   (with-slots (checksums) self
-    (let ((new-candidates (copy-list candidates)))
-      (dolist (c new-candidates)
-        (let ((from (file-candidate-source c)))
-          (loop while (or (and (fad:file-exists-p (file-candidate-target c))
-                               (not (check-if-equal from (file-candidate-target c) checksums)))
-                          (find-if (lambda (x)
-                                     (and 
-                                      (string-equal (namestring (file-candidate-target x)) (namestring (file-candidate-target c)))
-                                      (not (string-equal (namestring (file-candidate-source x)) (namestring (file-candidate-source c))))))
-                                   new-candidates))
-                do
-                (let ((new-version (bump-file-name (file-candidate-target c))))
-                  (setf (file-candidate-target c) new-version)))))
-      new-candidates)))
-
+    (let ((new-candidates (delete-if (compose #'null #'file-candidate-target) (copy-list candidates))))
+      (loop while new-candidates
+            do
+            (let* ((next (pop new-candidates))
+                   (target (file-candidate-target next))
+                   (version (get-maximum-file-version (list target))))
+              (multiple-value-bind (similar others) 
+                  (partition new-candidates
+                             (lambda (x)
+                               (equalp (file-candidate-target x)
+                                       target)))
+                (loop for cand in similar
+                      for i from (1+ version) to (+ version (length similar))
+                      do
+                      (setf (file-candidate-target cand)
+                            (bump-file-name (file-candidate-target cand) i)))
+                 (setf new-candidates others))))))
+    candidates)
 
 @export
 (defmethod create-list-of-candidates ((self renamer) &key recursive)
