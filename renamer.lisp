@@ -331,12 +331,10 @@ all of them"
     candidates)
 
 @export
-(defmethod create-list-of-candidates ((self renamer))
-  (let ((files
-         (bump-similar-candidates self
-                                  (verify-against-existing self
-                                                           (construct-target-filenames self)))))
-    files))
+(defmethod create-list-of-candidates ((self renamer) &key total-fun progress-fun)
+  (let ((files (construct-target-filenames self)))
+    (bump-similar-candidates self
+                             (verify-against-existing self files))))
 
 (defun check-if-equal (filename1 filename2 &optional checksum-hash)
   "Test if 2 files are equal.

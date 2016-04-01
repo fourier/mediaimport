@@ -34,7 +34,9 @@
                                   :reverse-sort 'string-greaterp)))
 
 (define-interface main-window ()
+  ;; slots
   ((duplicates :initform nil))
+  ;; ui elements
   (:panes
    (input-directory-field text-input-pane :callback #'on-collect-button)
    (input-button push-button :text "Choose Input directory..." :callback #'on-browse-button :data 'input )
@@ -44,48 +46,51 @@
    (exif-checkbox check-button :text "Use EXIF for JPG")
    (input-ext text-input-pane :title "Comma-separated list of extension[s], like \"jpg,png\"" :text "jpg")
    (output-ext text-input-pane :title "Output extension" :visible-max-width 40)
-   (prefix text-input-pane :title "Prefix (like \"Photo-\"" :text "Photo-")
+   (prefix text-input-pane :title "Prefix (like \"Photo-\")" :text "Photo-")
    (collect-button push-button :text "Collect data" :callback #'on-collect-button)
    (proposal-table multi-column-list-panel
-      :visible-min-width 600
-      :visible-min-height 200
-      :callback-type :item-interface ;; arguments to callback: item and interface
-      :header-args (list :selection-callback :sort) ;; "magic" callback tells it to use the sort descriptions
-      :sort-descriptions +proposal-table-sorting-types+
-      :column-function 'file-candidate-to-row
-      :color-function 'color-file-candidate
-      :action-callback 'edit-candidate-callback
-      :columns '((:title "From" 
-                  :adjust :left 
-                  :visible-min-width (character 45))
-                 (:title "To" 
-                  :adjust :left 
-                  :visible-min-width (character 45))
-                 (:title "Comments" 
-                  :adjust :left 
-                  :visible-min-width (character 45))))
+                   :visible-min-width '(:character 100)
+                   :visible-min-height '(:character 10)
+                   :callback-type :item-interface ;; arguments to callback: item and interface
+                   :header-args (list :selection-callback :sort) ;; "magic" callback tells it to use the sort descriptions
+                   :sort-descriptions +proposal-table-sorting-types+
+                   :column-function 'file-candidate-to-row
+                   :color-function 'color-file-candidate
+                   :action-callback 'edit-candidate-callback
+                   :columns '((:title "From" 
+                               :adjust :left 
+                               :visible-min-width (:character 45))
+                              (:title "To" 
+                               :adjust :left 
+                               :visible-min-width (:character 45))
+                              (:title "Comments" 
+                               :adjust :left 
+                               :visible-min-width (:character 45))))
    (copy-button push-button :text "Copy..." :callback #'on-copy-button)
    (progress-bar progress-bar))
-   (:layouts
-    (input-output-layout grid-layout '(input-button input-directory-field
-                                       output-button output-directory-field)
-                         :columns 2 :rows 2
-                         :x-adjust '(:right :left)
-                         :y-adjust '(:center :center))
-    (extensions-layout grid-layout '(recursive-checkbox input-ext
-                                     exif-checkbox output-ext prefix nil)
-                       :columns 2 :rows 3
-                       :x-adjust '(:left :right)
-                       :y-adjust '(:center :center))
-    (progress-layout switchable-layout '(nil progress-bar))
+  ;; Layout
+  (:layouts
+   (input-output-layout grid-layout '(input-button input-directory-field
+                                                   output-button output-directory-field)
+                        :columns 2 :rows 2
+                        :x-adjust '(:right :left)
+                        :y-adjust '(:center :center))
+   (extensions-layout grid-layout '(recursive-checkbox input-ext
+                                                       exif-checkbox output-ext prefix nil)
+                      :columns 2 :rows 3
+                      :x-adjust '(:left :right)
+                      :y-adjust '(:center :center))
+   (progress-layout switchable-layout '(nil progress-bar))
     
-    (main-layout column-layout '(input-output-layout
-                                 extensions-layout
-                                 collect-button
-                                 proposal-table 
-                                 copy-button
-                                 progress-layout) :adjust :center))
-    
+   (main-layout column-layout '(input-output-layout
+                                extensions-layout
+                                collect-button
+                                proposal-table 
+                                copy-button
+                                progress-layout)
+                :adjust :center
+                :y-ratios '(nil nil nil 1 nil nil)))
+  ;; all other properties
   (:default-initargs :title "Media Import"
    :visible-min-width 800
    :layout 'main-layout
