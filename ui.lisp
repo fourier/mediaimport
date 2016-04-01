@@ -207,18 +207,32 @@
                         
                         
 (defmethod collect-files-thread-fun ((self main-window) renamer)
-  (let ((candidates (create-list-of-candidates renamer)))
-    (mapc (lambda (cand)
-            (change-class cand 'file-candidate-item))
-          candidates)
-    (apply-in-pane-process self
-                           (lambda ()
-                             (with-slots (proposal-table copy-button) self
-                               (update-candidates self candidates)
-                               (setf (collection-items proposal-table)
-                                     candidates
-                                     (button-enabled copy-button) (> (length candidates) 0)))))
-    (toggle-progress self nil :end 1)))
+  (with-slots (progress-bar proposal-table copy-button) self
+    (let ((size 1))
+      (flet ((get-total-progress (limit)
+               (setq size limit)
+               (apply-in-pane-process self
+                                      (lambda ()
+                                        (setf (range-end   progress-bar) limit))))
+             (update-collect-progress (progress)
+               (apply-in-pane-process self
+                                      (lambda ()
+                                        (setf (range-slug-start progress-bar) progress)))))
+
+        (let ((candidates (create-list-of-candidates
+                           renamer
+                           :total-fun #'get-total-progress
+                           :progress-fun #'update-collect-progress)))
+          (mapc (lambda (cand)
+                  (change-class cand 'file-candidate-item))
+                candidates)
+          (apply-in-pane-process self
+                                 (lambda ()
+                                   (update-candidates self candidates)
+                                   (setf (collection-items proposal-table)
+                                         candidates
+                                         (button-enabled copy-button) (> (length candidates) 0)))))
+        (toggle-progress self nil :end size)))))
 
 
 

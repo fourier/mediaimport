@@ -242,7 +242,7 @@ file or bumped files based on FILENAME"
                      files))))
 
 
-(defmethod construct-target-filenames ((self renamer))
+(defmethod create-potential-file-candidates ((self renamer))
   "TODO: document it"
   (with-slots (source-path extensions recursive) self
     (flet ((correct-extension (fname)
@@ -268,41 +268,43 @@ file or bumped files based on FILENAME"
                      (remove-if-not #'correct-extension fnames)
                      fnames)))))))
 
-(defmethod verify-against-existing ((self renamer) candidates)
+(defmethod verify-against-existing ((self renamer) candidates &key progress-fun)
   "Process the list of CANDIDATES and try to find existing files.
 If existing files are in place AND are the same, set the candidate name as nil.
 Otherwise try to bump the file name until no file with the same name exists.
 After this operation CANDIDATES will contain targets either nil or non-existing
 file names."
   (with-slots (checksums) self
-    ;; 1. Remove those candidates for which the target is already exists and
-    ;;    the same
-    (dolist (cand candidates)
-      (let ((target (file-candidate-target cand)))
-        ;; find the list of similar files
-        (when-let (similar (find-similar-files target))
-          ;; some existing files are similar. Try to find those who are the same
-          (if-let (found (some (lambda (x) (and (check-if-equal
-                                                 (file-candidate-source cand)
-                                                 x
-                                                 checksums) x))
-                               similar))
-              ;; found, clean the target and set appropriate comment
-              (setf (file-candidate-target cand) nil
-                    (file-candidate-comment cand)
-                    (concatenate 'string "Same as: " found))
-            ;; all existing are not the same as our target. Bump it then!
-            (setf (file-candidate-target cand)
-                  (bump-file-name target (1+ (get-maximum-file-version similar))))))))
-    candidates))
+    (let ((progress 0))
+      ;; 1. Remove those candidates for which the target is already exists and
+      ;;    the same
+      (dolist (cand candidates)
+        (when progress-fun (funcall progress-fun (incf progress)))
+        (let ((target (file-candidate-target cand)))
+          ;; find the list of similar files
+          (when-let (similar (find-similar-files target))
+            ;; some existing files are similar. Try to find those who are the same
+            (if-let (found (some (lambda (x) (and (check-if-equal
+                                                   (file-candidate-source cand)
+                                                   x
+                                                   checksums) x))
+                                 similar))
+                ;; found, clean the target and set appropriate comment
+                (setf (file-candidate-target cand) nil
+                      (file-candidate-comment cand)
+                      (concatenate 'string "Same as: " found))
+              ;; all existing are not the same as our target. Bump it then!
+              (setf (file-candidate-target cand)
+                    (bump-file-name target (1+ (get-maximum-file-version similar))))))))
+      candidates)))
               
 
 (defmethod bump-similar-candidates ((self renamer) candidates)
   "For each candidate if there is another candidates with the same name, bump
 all of them"
-  (with-slots (checksums) self
-    ;; first of all filter out candidates which found existing
-    (let ((new-candidates (delete-if (compose #'null #'file-candidate-target) (copy-list candidates))))
+  ;; first of all filter out candidates which found existing
+  (let* ((new-candidates (delete-if (compose #'null #'file-candidate-target) (copy-list candidates))))
+    (with-slots (checksums) self
       ;; the algorithm is the following:
       ;; 1. take the list of candidates
       (loop while new-candidates
@@ -327,14 +329,27 @@ all of them"
                       do
                       (setf (file-candidate-target cand)
                             (bump-file-name (file-candidate-target cand) i)))
-                 (setf new-candidates others))))))
-    candidates)
+                (setf new-candidates others))))))
+  candidates)
 
 @export
 (defmethod create-list-of-candidates ((self renamer) &key total-fun progress-fun)
-  (let ((files (construct-target-filenames self)))
+  "Creates a final list of candidates. The main function of the renamer class,
+its external interface.
+TOTAL-FUN is a callback which will receive a list of items in progress-bar.
+PROGRESS-FUN is a callback which will receive a current progress up
+to the value received in TOTAL-FUN."
+  ;; construct initial list of candidates
+  ;; this operation could probably be lengthy, but since we don't
+  ;; know yet the number of files to process, we cannot report
+  ;; the progress
+  (let ((candidates (create-potential-file-candidates self)))
+    ;; report total number of items in progress bar
+    ;; it is the number of files + 10% (reserved for progress of the bumping function)
+    (when total-fun (funcall total-fun (+ (length candidates)
+                                          (ceiling (/ (length candidates) 10.0)))))
     (bump-similar-candidates self
-                             (verify-against-existing self files))))
+                             (verify-against-existing self candidates :progress-fun progress-fun))))
 
 (defun check-if-equal (filename1 filename2 &optional checksum-hash)
   "Test if 2 files are equal.
