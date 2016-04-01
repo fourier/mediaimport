@@ -3,15 +3,35 @@
 ;; To run, execute (mediaimport.ui:main)
 ;;
 (defpackage #:mediaimport.ui
-  (:use #:cl #:capi #:mediaimport.utils #:mediaimport.renamer)
+  (:use #:cl #:capi #:mediaimport.utils #:mediaimport.renamer #:alexandria)
+  ;; these names should be from alexandria rather than lispworks
+  (:shadowing-import-from #:alexandria if-let removef when-let* appendf copy-file with-unique-names nconcf when-let)
   (:add-use-defaults t))
 
 (in-package #:mediaimport.ui)
 (annot:enable-annot-syntax)
 
+;;(shadowing-import :alexandria 'compose)
+
 (defvar *main-window* nil
   "Main window instance")
   
+(defvar +proposal-table-sorting-types+
+  (list
+   (capi:make-sorting-description :type "From"
+                                  :key (compose #'namestring #'file-candidate-source)
+                                  :sort 'string-lessp
+                                  :reverse-sort 'string-greaterp)
+   (capi:make-sorting-description :type "To"
+                                  ;; in order to do sorting we need to remember
+                                  ;; what target could be nil
+                                  :key (lambda (x) (namestring (or (file-candidate-target x) "(skip)")))
+                                  :sort 'string-lessp
+                                  :reverse-sort 'string-greaterp)
+   (capi:make-sorting-description :type "Comments"
+                                  :key 'file-candidate-comment
+                                  :sort 'string-lessp
+                                  :reverse-sort 'string-greaterp)))
 
 (define-interface main-window ()
   ((duplicates :initform nil))
@@ -29,7 +49,9 @@
    (proposal-table multi-column-list-panel
       :visible-min-width 600
       :visible-min-height 200
-      :callback-type :item-interface
+      :callback-type :item-interface ;; arguments to callback: item and interface
+      :header-args (list :selection-callback :sort) ;; "magic" callback tells it to use the sort descriptions
+      :sort-descriptions +proposal-table-sorting-types+
       :column-function 'file-candidate-to-row
       :color-function 'color-file-candidate
       :action-callback 'edit-candidate-callback
@@ -162,7 +184,8 @@
                  (display-message "Directory ~s doesn't exist" source-path))
                 ((not (directory-exists-p dest-path))
                  (display-message "Directory ~s doesn't exist" dest-path))
-                (t 
+                ;; do processing only when directories are not the same
+                ((not (equalp (truename source-path) (truename dest-path)))
                  (let* ((extensions (text-input-pane-text input-ext))
                         (new-extension (text-input-pane-text output-ext))
                         (prefix-text (text-input-pane-text prefix))

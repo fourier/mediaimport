@@ -309,7 +309,7 @@ all of them"
             ;; 2. pop the first candidate in the list            
             (let* ((next (pop new-candidates))
                    (target (file-candidate-target next))
-                   (version (get-maximum-file-version (list target))))
+                   (version (or (get-maximum-file-version (list target)) 0)))
               ;; 3. split remaining candidates to 2 groups:
               ;; with the same name and with different names
               ;; the group of remaining candidates with names != our
@@ -412,7 +412,7 @@ In case of success 2nd argument is nil."
 
 ;;; Tests
 ;; (in-package :mediaimport.renamer)
-;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :extensions "jpg" :new-extension "png"))
+;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :extensions "jpg" :new-extension "png" :prefix "Photo-"))
 ;; (construct-target-filename * "~/1/12442783_1081637521900005_512987139_n.jpg")
 ;; (pprint (construct-target-filenames r))
 ;; (pprint (create-list-of-candidates r))
