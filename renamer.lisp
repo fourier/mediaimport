@@ -300,17 +300,27 @@ file names."
   "For each candidate if there is another candidates with the same name, bump
 all of them"
   (with-slots (checksums) self
+    ;; first of all filter out candidates which found existing
     (let ((new-candidates (delete-if (compose #'null #'file-candidate-target) (copy-list candidates))))
+      ;; the algorithm is the following:
+      ;; 1. take the list of candidates
       (loop while new-candidates
             do
+            ;; 2. pop the first candidate in the list            
             (let* ((next (pop new-candidates))
                    (target (file-candidate-target next))
                    (version (get-maximum-file-version (list target))))
+              ;; 3. split remaining candidates to 2 groups:
+              ;; with the same name and with different names
+              ;; the group of remaining candidates with names != our
+              ;; popped candidate name is the new list of candidates
               (multiple-value-bind (similar others) 
                   (partition new-candidates
                              (lambda (x)
                                (equalp (file-candidate-target x)
                                        target)))
+                ;; 4. bump all candidates with the same name, by
+                ;;    just increasing their versions
                 (loop for cand in similar
                       for i from (1+ version) to (+ version (length similar))
                       do
