@@ -168,43 +168,53 @@
 (defun on-collect-button (data self)
   ;; could be called from edit fields or as a button itself
   (declare (ignore data))
-  (with-slots (proposal-table
-               input-directory-field
+  (with-slots (input-directory-field
                output-directory-field
                input-ext
                output-ext
                prefix
                recursive-checkbox
-               exif-checkbox
-               copy-button) self
-      (let ((source-path (text-input-pane-text input-directory-field))
-            (dest-path (text-input-pane-text output-directory-field)))
-        (when (and (> (length source-path) 0) (> (length dest-path) 0))
-          (cond ((not (directory-exists-p source-path))
-                 (display-message "Directory ~s doesn't exist" source-path))
-                ((not (directory-exists-p dest-path))
-                 (display-message "Directory ~s doesn't exist" dest-path))
-                ;; do processing only when directories are not the same
-                ((not (equalp (truename source-path) (truename dest-path)))
-                 (let* ((extensions (text-input-pane-text input-ext))
-                        (new-extension (text-input-pane-text output-ext))
-                        (prefix-text (text-input-pane-text prefix))
-                        (r (make-instance 'renamer
-                                          :source-path source-path
-                                          :destination-path dest-path
-                                          :prefix prefix-text
-                                          :extensions extensions
-                                          :new-extension new-extension
-                                          :use-exif (button-selected exif-checkbox)))
-                        (candidates (create-list-of-candidates r
-                                                               :recursive (button-selected recursive-checkbox))))
-                   (mapc (lambda (cand)
-                           (change-class cand 'file-candidate-item))
-                         candidates)
-                   (update-candidates self candidates)
-                   (setf (collection-items proposal-table)
-                         candidates)
-                   (setf (button-enabled copy-button) (> (length candidates) 0)))))))))
+               exif-checkbox) self
+    (let ((source-path (text-input-pane-text input-directory-field))
+          (dest-path (text-input-pane-text output-directory-field)))
+      (when (and (> (length source-path) 0) (> (length dest-path) 0))
+        (cond ((not (directory-exists-p source-path))
+               (display-message "Directory ~s doesn't exist" source-path))
+              ((not (directory-exists-p dest-path))
+               (display-message "Directory ~s doesn't exist" dest-path))
+              ;; do processing only when directories are not the same
+              ((not (equalp (truename source-path) (truename dest-path)))
+               (let* ((extensions (text-input-pane-text input-ext))
+                      (new-extension (text-input-pane-text output-ext))
+                      (prefix-text (text-input-pane-text prefix))
+                      (r (make-instance 'renamer
+                                        :source-path source-path
+                                        :destination-path dest-path
+                                        :prefix prefix-text
+                                        :extensions extensions
+                                        :new-extension new-extension
+                                        :use-exif (button-selected exif-checkbox)
+                                        :recursive (button-selected recursive-checkbox))))
+                 (toggle-progress self t :end 1)
+                 ;; start worker thread
+                 (mp:process-run-function "Collect files" nil #'collect-files-thread-fun self r))))))))
+                 
+                        
+                        
+(defmethod collect-files-thread-fun ((self main-window) renamer)
+  (let ((candidates (create-list-of-candidates renamer)))
+    (mapc (lambda (cand)
+            (change-class cand 'file-candidate-item))
+          candidates)
+    (apply-in-pane-process self
+                           (lambda ()
+                             (with-slots (proposal-table copy-button) self
+                               (update-candidates self candidates)
+                               (setf (collection-items proposal-table)
+                                     candidates
+                                     (button-enabled copy-button) (> (length candidates) 0)))))
+    (toggle-progress self nil :end 1)))
+
 
 
 (defun file-candidate-to-row (cand)
@@ -237,7 +247,7 @@
 
 (defun on-copy-button (data self)
   (declare (ignore data))
-  (with-slots (proposal-table progress-layout progress-bar) self
+  (with-slots (proposal-table) self
     ;; ask for confirmation
     (when (confirm-yes-or-no
            "Are you sure want to start copying?")
@@ -251,12 +261,7 @@
                    (or (not some-exists)
                        (confirm-yes-or-no
                         "Some existing files will be overwriten. Proceed anyway?")))
-          ;; ok first make progress-bar visible
-          (setf (switchable-layout-visible-child progress-layout) progress-bar)
-          ;; then set the range on the progress bar equal to the number of files
-          (setf (range-start progress-bar) 0
-                (range-end   progress-bar) (length items)
-                (range-slug-start progress-bar) 0)
+          (toggle-progress self t :end (length items))
           ;; start worker thread
           (mp:process-run-function "Copy files" nil #'copy-files-thread-fun self items))))))
 
@@ -271,24 +276,39 @@
                                         self
                                       (let ((item (aref items i)))
                                         (setf (range-slug-start progress-bar) (1+ i))
-                                        (setf (file-candidate-status item)
-                                              (if error-text 'error 'copied))
+                                        (unless (eql (file-candidate-status item) 'skip)
+                                          (setf (file-candidate-status item)
+                                                (if error-text 'error 'copied)))
                                         (update-candidate-status item)
                                         (when error-text
                                           (setf (file-candidate-comment item)
                                                 error-text))
                                         (redisplay-collection-item proposal-table item)))))))           
-    ;; first disable all buttons
-    (apply-in-pane-process self (lambda () (enable-interface self :enable nil)))
     ;; copy files with our callback
     (copy-files items :callback #'copy-files-callback)
     ;; and finally update progress, hide it and enable all buttons
-    (apply-in-pane-process self
-                           (lambda ()
-                             (with-slots (progress-layout progress-bar) self
-                               (setf (range-slug-start progress-bar) (length items))
-                               (setf (switchable-layout-visible-child progress-layout) nil)
-                               (enable-interface self :enable t))))))
+    (toggle-progress self nil :end (length items))))
+
+(defmethod toggle-progress ((self main-window) enable &key (start 0) end)
+  (apply-in-pane-process self
+                         (lambda ()
+                           (with-slots (progress-bar progress-layout) self
+                             (if enable
+                                 ;; ok first make progress-bar visible
+                                 (setf (switchable-layout-visible-child progress-layout) progress-bar
+                                       ;; then set the range on the progress bar equal to the number of files
+                                       (range-start progress-bar) start
+                                       (range-end   progress-bar) end
+                                       (range-slug-start progress-bar) 0)
+                                 ;; disable
+                                 (setf (range-slug-start progress-bar) end
+                                       (switchable-layout-visible-child progress-layout) nil))
+                             ;; enable/disable buttons
+                             (enable-interface self :enable (not enable))))))
+
+                             
+                             
+  
 
 (defmethod enable-interface ((self main-window) &key (enable t))
   "Enable or disable buttons and input fields. Called when some

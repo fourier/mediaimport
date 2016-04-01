@@ -36,6 +36,7 @@ the input and output file name as well as the source file timestamp"))
                       (extensions :initform nil :initarg :extensions)
                       (new-extension :initform nil :initarg :new-extension)
                       (use-exif :initform nil :initarg :use-exif)
+                      (recursive :initform nil :initarg :recursive)
                       (checksums :initform (make-hash-table :test #'equal))))
 
 (defmethod initialize-instance :after ((self renamer) &key)
@@ -241,16 +242,16 @@ file or bumped files based on FILENAME"
                      files))))
 
 
-(defmethod construct-target-filenames ((self renamer) &key recursive)
+(defmethod construct-target-filenames ((self renamer))
   "TODO: document it"
-  (with-slots (source-path extensions) self
+  (with-slots (source-path extensions recursive) self
     (flet ((correct-extension (fname)
              (let ((ext (string-upcase (pathname-type fname))))
                (cond ((null extensions) t)
                      ((atom extensions) (string= extensions ext))
                      ((consp extensions)
                       (find ext extensions :test (lambda (x y)
-                                                  (string= y x))))))))
+                                                   (string= y x))))))))
       (let (fnames)
         (if recursive
             (fad:walk-directory source-path (lambda (x) (push x fnames)))
@@ -259,9 +260,9 @@ file or bumped files based on FILENAME"
                   (multiple-value-bind (fname ts)
                       (construct-target-filename self x)
                     (make-instance 'file-candidate
-                     :source x
-                     :target fname
-                     :timestamp ts)))
+                                   :source x
+                                   :target fname
+                                   :timestamp ts)))
                 (nreverse
                  (if extensions 
                      (remove-if-not #'correct-extension fnames)
@@ -330,11 +331,11 @@ all of them"
     candidates)
 
 @export
-(defmethod create-list-of-candidates ((self renamer) &key recursive)
+(defmethod create-list-of-candidates ((self renamer))
   (let ((files
          (bump-similar-candidates self
-          (verify-against-existing self
-           (construct-target-filenames self :recursive recursive)))))
+                                  (verify-against-existing self
+                                                           (construct-target-filenames self)))))
     files))
 
 (defun check-if-equal (filename1 filename2 &optional checksum-hash)
@@ -385,16 +386,15 @@ In case of success 2nd argument is nil."
             (to (file-candidate-target cand))
             (result
              ;; result will contain either a nil or a error message
-             (if to
+             (when to
                  (handler-case
-                     (progn 
+                     (progn
                        (ensure-directories-exist (fad:pathname-directory-pathname to))
                        (copy-file from to)
                        nil)
                    (file-error (err)
                      (with-output-to-string (s)
-                       (format s "~a" err))))
-                 t)))
+                       (format s "~a" err)))))))
             ;; if callback function is provided, call it
        (when callback
          (funcall callback i result))))
@@ -412,7 +412,7 @@ In case of success 2nd argument is nil."
 
 ;;; Tests
 ;; (in-package :mediaimport.renamer)
-;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :extensions "jpg" :new-extension "png" :prefix "Photo-"))
+;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :extensions "jpg" :new-extension "png" :prefix "Photo-" :recursive t))
 ;; (construct-target-filename * "~/1/12442783_1081637521900005_512987139_n.jpg")
 ;; (pprint (construct-target-filenames r))
 ;; (pprint (create-list-of-candidates r))
