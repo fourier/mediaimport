@@ -89,3 +89,55 @@ occurences of items in the array/list"
         (gethash arg nonuniques-table)
       (values (if (not result) nil (> value 1)) result))))
 
+(defconstant +regex-escape-chars+
+  '(#\\
+    #\*
+    #\+
+    #\?
+    #\|
+    #\{
+    #\}
+    #\[
+    #\]
+    #\(
+    #\)
+    #\^
+    #\$
+    #\.
+    #\#
+    #\Space))
+
+@export
+(defun wildcard-to-regex (wildcard)
+  "Convert file wildcards to regular expressions.
+Example:
+=> (mediaimport.utils:wildcard-to-regex \"Photo*.jpg\") 
+\"^Photo.*\\\\.jpg$\""
+  ;; special case: *.* means * in reality
+  (if (string= wildcard "*.*")
+      ".*"
+      ;; otherwise do processing
+      (let ((regex
+             (make-array (+ 8 (length wildcard))
+                         :element-type
+                         'lw:bmp-char
+                         :fill-pointer 0
+                         :adjustable t)))
+        (vector-push-extend #\^ regex)
+        (loop for char across wildcard do
+              (cond ((eq char #\*)
+                     (progn
+                       (vector-push-extend #\. regex)
+                       (vector-push-extend #\* regex)))
+                    ((eq char #\?)
+                     (vector-push-extend #\. regex))
+                    ((find char +regex-escape-chars+)
+                     (progn
+                       (vector-push-extend #\\ regex)
+                       (vector-push-extend char regex)))
+                    (t (vector-push-extend char regex))))
+        (vector-push-extend #\$ regex)
+        regex)))
+
+
+    

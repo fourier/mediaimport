@@ -417,6 +417,7 @@ In case of success 2nd argument is nil."
 
 @export
 (defun init()
+  "Platform-dependent initialization"
   #+sbcl
   (setf SB-ALIEN::*DEFAULT-C-STRING-EXTERNAL-FORMAT* :UTF-8)
   #+lispworks
