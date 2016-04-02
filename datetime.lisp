@@ -75,3 +75,21 @@ the file FILENAME. If no EXIF found returns nil"
               ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
                (make-datetime-from-gps-timestamps gds gts))))
     (zpb-exif:invalid-exif-stream (err) nil)))
+
+@export
+(defun datetime-localized-month (dt)
+  (let ((month (datetime-month dt)))
+    (case month
+      (1 "January")
+      (2 "February")
+      (3 "March")
+      (4 "April")
+      (5 "May")
+      (6 "June")
+      (7 "July")
+      (8 "August")
+      (9 "September")
+      (10 "October")
+      (11 "November")
+      (12 "December")
+      (otherwise "Unknown"))))

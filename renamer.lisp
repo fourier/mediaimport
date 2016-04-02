@@ -8,6 +8,28 @@
 
 ;;; "mediaimport" goes here. Hacks and glory await!
 
+(defconstant +timestamp-format-mapping+
+  (make-hash-table :test #'string=)
+  "Hash table containing mapping between timestamp pseudo-formatting
+and FORMAT formatting")
+
+;; fill the +timestamp-format-mapping+
+(eval-when (:compile-toplevel :load-toplevel)
+  (setf (gethash "{YYYY}" +timestamp-format-mapping+)
+        (cons "~4,'0d" #'datetime-year)
+        (gethash "{MM}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-month)
+        (gethash "{MONTH}" +timestamp-format-mapping+)
+        (cons "~s" #'datetime-localized-month)
+        (gethash "{DD}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-date)
+        (gethash "{hh}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-hour)
+        (gethash "{mm}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-minute)
+        (gethash "{ss}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-second)))
+        
 @export-class
 (defclass file-candidate ()
   ((source :accessor file-candidate-source :initarg :source
@@ -56,8 +78,36 @@ the input and output file name as well as the source file timestamp"))
                             nil
                             (string-trim " " new-extension)))))
 
-  
-
+(defun format-timestamp-string (pattern ts)
+  "Creates a formatted string from given pattern and timestamp.
+Formatting arguments:
+{YYYY}  - year
+{MM}    - month (1-based)
+{DD}    - day of month (1-based)
+{Month} - literal month name (i.e. \"January\")
+{hh}    - hour
+{mm}    - minute
+{ss}    - second
+Example:
+=> (format-timestamp-string \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.JPG\" (make-datetime-from-string \"2011:01:02 13:28:33333\"))
+\"2011-01-02/Photo-13_28.JPG\""
+  (let* ((regex
+          (format nil "(~{~A~^|~})"
+                  (hash-table-keys +timestamp-format-mapping+)))
+         (matches (ppcre:all-matches-as-strings regex pattern))
+         (result-list nil)
+         (new-format-string (copy-seq pattern)))
+    ;; create a format string replacing the templates like "{yyyy}" with
+    ;; corresponding formatting options
+    (maphash (lambda (key val)
+               (setf new-format-string (ppcre:regex-replace-all key new-format-string (car val))))
+             +timestamp-format-mapping+)
+    ;; collect all values in the correct order
+    (dolist (key matches)
+      (when-let (found (gethash key +timestamp-format-mapping+))
+        (push (funcall (cdr found) ts) result-list)))
+    (apply (curry #'format nil new-format-string) (nreverse result-list))))
+    
 (defun timestamp-based-filename (filename timestamp
                                           &key
                                           new-ext
@@ -68,7 +118,9 @@ Example:
 => (timestamp-based-filename \"~/Sources/lisp/README.txt\")
 \"2016-03-06/IMAGE_16-47.txt\""
   (let ((ext (or new-ext (pathname-type filename))))
-    (with-output-to-string (s)
+    (format-timestamp-string "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg" timestamp)))
+#|
+(with-output-to-string (s)
          (format s "~4,'0d-~2,'0d-~2,'0d/~@[~a~]~2,'0d_~2,'0d~@[.~a~]"
                  (datetime-year timestamp)
                  (datetime-month timestamp)
@@ -78,6 +130,7 @@ Example:
                  (datetime-minute timestamp)
                  ext)
          s)))
+|#
 
 
 (defmethod construct-target-filename ((self renamer) input-filename)

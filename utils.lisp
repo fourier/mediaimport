@@ -6,6 +6,26 @@
 (annot:enable-annot-syntax)
 
 
+(defconstant +regex-escape-chars+
+  '(#\\
+    #\*
+    #\+
+    #\?
+    #\|
+    #\{
+    #\}
+    #\[
+    #\]
+    #\(
+    #\)
+    #\^
+    #\$
+    #\.
+    #\#
+    #\Space)
+  "List of special characters to be escaped in file mask")
+
+
 @export
 (defun interleave (list1 list2)
   "Interleaves 2 lists.
@@ -89,23 +109,6 @@ occurences of items in the array/list"
         (gethash arg nonuniques-table)
       (values (if (not result) nil (> value 1)) result))))
 
-(defconstant +regex-escape-chars+
-  '(#\\
-    #\*
-    #\+
-    #\?
-    #\|
-    #\{
-    #\}
-    #\[
-    #\]
-    #\(
-    #\)
-    #\^
-    #\$
-    #\.
-    #\#
-    #\Space))
 
 @export
 (defun wildcard-to-regex (wildcard &key case-sensitive-p)
