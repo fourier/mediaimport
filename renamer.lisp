@@ -33,30 +33,25 @@ the input and output file name as well as the source file timestamp"))
 (defclass renamer () ((source-path :initarg :source-path)
                       (destination-path :initarg :destination-path)
                       (prefix :initform nil :initarg :prefix)
-                      (extensions :initform nil :initarg :extensions)
+                      (filemasks :initform nil :initarg :filemasks)
                       (new-extension :initform nil :initarg :new-extension)
                       (use-exif :initform nil :initarg :use-exif)
                       (recursive :initform nil :initarg :recursive)
                       (checksums :initform (make-hash-table :test #'equal))))
 
 (defmethod initialize-instance :after ((self renamer) &key)
-  (with-slots (source-path destination-path extensions new-extension) self
+  (with-slots (source-path destination-path filemasks new-extension) self
     ;; process paths
     (setf source-path (truename source-path))
     (setf destination-path (truename destination-path))
-    ;; process extensions
-    (cond ((and extensions (= (length extensions) 0))
-           (setf extensions nil))
-          ((and extensions (atom extensions))
-           (setf extensions (mapcar (lambda (x)
-                                      (string-upcase (string-trim " " x)))
-                                    (lw:split-sequence "," extensions)))
-           (when (= (length extensions) 1)
-             (setf extensions (car extensions))))
-          ((and extensions (listp extensions))
-           (setf extensions (mapcar (lambda (x)
-                                      (string-upcase (string-trim " " x)))
-                                    extensions))))
+    ;; process filemasks
+    (if (and filemasks (= (length filemasks) 0))
+        (setf filemasks nil)
+        (setf filemasks (mapcar (compose 
+                                 #'ppcre:create-scanner
+                                 #'wildcard-to-regex
+                                 (curry #'string-trim " "))
+                                (lw:split-sequence "," filemasks))))
     (setf new-extension (if (= (length new-extension) 0)
                             nil
                             (string-trim " " new-extension)))))
@@ -243,16 +238,17 @@ file or bumped files based on FILENAME"
 
 
 (defmethod create-potential-file-candidates ((self renamer))
-  "TODO: document it"
-  (with-slots (source-path extensions recursive) self
-    (flet ((correct-extension (fname)
-             (let ((ext (string-upcase (pathname-type fname))))
-               (cond ((null extensions) t)
-                     ((atom extensions) (string= extensions ext))
-                     ((consp extensions)
-                      (find ext extensions :test (lambda (x y)
-                                                   (string= y x))))))))
+  "Create a preliminary list of file candidates.
+This function iterates over all files, selecting those matching filemasks
+and prepare a target name based on timestamp/etc information."
+  (with-slots (source-path filemasks recursive) self
+    ;; predicate which identifies if the filename is acceptable,
+    ;; i.e. complies to any of file masks
+    (flet ((acceptable-file (fname)
+             (let ((short-name (file-namestring fname)))
+               (some (lambda (x) (ppcre:scan x short-name)) filemasks))))
       (let (fnames)
+        ;; collect list of all filenames into the fnames list
         (if recursive
             (fad:walk-directory source-path (lambda (x) (push x fnames)))
             (setf fnames (remove-if #'fad:directory-pathname-p (fad:list-directory source-path))))
@@ -264,9 +260,10 @@ file or bumped files based on FILENAME"
                                    :target fname
                                    :timestamp ts)))
                 (nreverse
-                 (if extensions 
-                     (remove-if-not #'correct-extension fnames)
+                 (if filemasks 
+                     (remove-if-not #'acceptable-file fnames)
                      fnames)))))))
+
 
 (defmethod verify-against-existing ((self renamer) candidates &key progress-fun)
   "Process the list of CANDIDATES and try to find existing files.
@@ -426,9 +423,9 @@ In case of success 2nd argument is nil."
 
 ;;; Tests
 ;; (in-package :mediaimport.renamer)
-;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :extensions "jpg" :new-extension "png" :prefix "Photo-" :recursive t))
+;; (setf r (make-instance 'renamer :source-path "~/1" :destination-path "~/2" :filemasks "*.jpg" :new-extension "png" :prefix "Photo-" :recursive t))
 ;; (construct-target-filename * "~/1/12442783_1081637521900005_512987139_n.jpg")
-;; (pprint (construct-target-filenames r))
+;; (pprint (create-potential-file-candidates r))
 ;; (pprint (create-list-of-candidates r))
 
 

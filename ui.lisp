@@ -44,7 +44,7 @@
    (output-button push-button :text "Choose Output directory..." :callback #'on-browse-button :data 'output)
    (recursive-checkbox check-button :text "Search in subdirectories")
    (exif-checkbox check-button :text "Use EXIF for JPG")
-   (input-ext text-input-pane :title "Comma-separated list of extension[s], like \"jpg,png\"" :text "jpg")
+   (input-filemasks text-input-pane :title "Comma-separated list of file masks, like \"*.jpg,*.png\"" :text "*.jpg")
    (output-ext text-input-pane :title "Output extension" :visible-max-width 40)
    (prefix text-input-pane :title "Prefix (like \"Photo-\")" :text "Photo-")
    (collect-button push-button :text "Collect data" :callback #'on-collect-button)
@@ -75,7 +75,7 @@
                         :columns 2 :rows 2
                         :x-adjust '(:right :left)
                         :y-adjust '(:center :center))
-   (extensions-layout grid-layout '(recursive-checkbox input-ext
+   (extensions-layout grid-layout '(recursive-checkbox input-filemasks
                                                        exif-checkbox output-ext prefix nil)
                       :columns 2 :rows 3
                       :x-adjust '(:left :right)
@@ -175,7 +175,7 @@
   (declare (ignore data))
   (with-slots (input-directory-field
                output-directory-field
-               input-ext
+               input-filemasks
                output-ext
                prefix
                recursive-checkbox
@@ -189,14 +189,14 @@
                (display-message "Directory ~s doesn't exist" dest-path))
               ;; do processing only when directories are not the same
               ((not (equalp (truename source-path) (truename dest-path)))
-               (let* ((extensions (text-input-pane-text input-ext))
+               (let* ((masks (text-input-pane-text input-filemasks))
                       (new-extension (text-input-pane-text output-ext))
                       (prefix-text (text-input-pane-text prefix))
                       (r (make-instance 'renamer
                                         :source-path source-path
                                         :destination-path dest-path
                                         :prefix prefix-text
-                                        :extensions extensions
+                                        :filemasks masks
                                         :new-extension new-extension
                                         :use-exif (button-selected exif-checkbox)
                                         :recursive (button-selected recursive-checkbox))))
