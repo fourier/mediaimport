@@ -108,11 +108,13 @@ occurences of items in the array/list"
     #\Space))
 
 @export
-(defun wildcard-to-regex (wildcard)
-  "Convert file wildcards to regular expressions.
+(defun wildcard-to-regex (wildcard &key case-sensitive-p)
+  "Convert file wildcards to regular expressions. By default the regular
+expression is case insensitive. This is regulated by keyword argument
+CASE-SENSITIVE-P
 Example:
 => (mediaimport.utils:wildcard-to-regex \"Photo*.jpg\") 
-\"^Photo.*\\\\.jpg$\""
+\"(?i)^Photo.*\\\\.jpg$\""
   ;; special case: *.* means * in reality
   (if (string= wildcard "*.*")
       ".*"
@@ -123,6 +125,11 @@ Example:
                          'lw:bmp-char
                          :fill-pointer 0
                          :adjustable t)))
+        (unless case-sensitive-p
+          (vector-push-extend #\( regex)
+          (vector-push-extend #\? regex)
+          (vector-push-extend #\i regex)
+          (vector-push-extend #\) regex))
         (vector-push-extend #\^ regex)
         (loop for char across wildcard do
               (cond ((eq char #\*)
