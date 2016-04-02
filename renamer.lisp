@@ -81,16 +81,10 @@ Example:
 
 
 (defmethod construct-target-filename ((self renamer) input-filename)
-  "TODO: this is outdated
-By given INPUT-FILENAME and optionally OUTPUT-DIR construct
-the full path to the file renamed after its timestamp.
-Optional key EXT allows to select another file extension.
-Example:
-=> (construct-target-filename \"~/Sources/lisp/README.txt\")
-#P\"/Volumes/storage/Video/From Camera/2016-03-06/16-47.txt\"
-
-=> (construct-target-filename \"~/Sources/lisp/README.txt\" :output-dir \"/Users/username\" :ext \"mp4\")
-#P\"/Users/username/2016-03-06/16-47.mp4\""
+  "By given INPUT-FILENAMEconstruct
+the full path to the file renamed after its timestamp
+If the :use-exif flag is set in the class instance, try to get the EXIF
+information first if the file is JPEG"
   (with-slots (destination-path new-extension prefix use-exif) self
     (let* ((ext (string-upcase (pathname-type input-filename)))
            (timestamp (or (and (equal ext "JPG")
@@ -252,6 +246,8 @@ and prepare a target name based on timestamp/etc information."
         (if recursive
             (fad:walk-directory source-path (lambda (x) (push x fnames)))
             (setf fnames (remove-if #'fad:directory-pathname-p (fad:list-directory source-path))))
+        ;; finally remove not acceptable files (reversing back since we've pushed
+        ;; files into the fnames list and create file-candidate for every file name
         (mapcar (lambda (x)
                   (multiple-value-bind (fname ts)
                       (construct-target-filename self x)
