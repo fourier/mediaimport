@@ -20,7 +20,13 @@ and FORMAT formatting")
         (gethash "{MM}" +timestamp-format-mapping+)
         (cons "~2,'0d" #'datetime-month)
         (gethash "{MONTH}" +timestamp-format-mapping+)
-        (cons "~s" #'datetime-localized-month)
+        (cons "~a" #'datetime-string-month)
+        (gethash "{MON}" +timestamp-format-mapping+)
+        (cons "~a" (lambda (x) (datetime-string-month x :short t)))
+        (gethash "{МЕСЯЦ}" +timestamp-format-mapping+)
+        (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
+        (gethash "{МЕС}" +timestamp-format-mapping+)
+        (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
         (gethash "{DD}" +timestamp-format-mapping+)
         (cons "~2,'0d" #'datetime-date)
         (gethash "{hh}" +timestamp-format-mapping+)
@@ -52,13 +58,20 @@ the input and output file name as well as the source file timestamp"))
 
 
 @export
-(defclass renamer () ((source-path :initarg :source-path)
-                      (destination-path :initarg :destination-path)
-                      (filemasks :initform nil :initarg :filemasks)
-                      (pattern :initform nil :initarg :pattern)
+(defclass renamer () ((source-path :initarg :source-path
+                                   :documentation "Source directory to copy files from")
+                      (destination-path :initarg :destination-path
+                                        :documentation "Destination directory used as a base to copy files to")
+                      (filemasks :initform nil :initarg :filemasks
+                                 :documentation "File masks. In constructor one provides a string like \"*.jpg, *.png\" and it is converted to the list of regexps matching those filemasks")
+                      (pattern :initform nil :initarg :pattern
+                               :documentation "Renaming pattern. Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\". If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions")
                       (use-exif :initform nil :initarg :use-exif)
                       (recursive :initform nil :initarg :recursive)
-                      (checksums :initform (make-hash-table :test #'equal))))
+                      (checksums :initform (make-hash-table :test #'equal)))
+  (:documentation "Renamer class encapsulates all the necessary information
+needed for collecting files for copying/processing and creates a list
+of candidates for copy/process"))
 
 (defmethod initialize-instance :after ((self renamer) &key)
   (with-slots (source-path destination-path filemasks new-extension) self

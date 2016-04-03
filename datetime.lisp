@@ -5,6 +5,20 @@
 (in-package #:mediaimport.datetime)
 (annot:enable-annot-syntax)
 
+(defconstant +months+
+  #((:en "January"   :ru "Январь")
+    (:en "February"  :ru "Февраль")
+    (:en "March"     :ru "Март")
+    (:en "April"     :ru "Апрель")
+    (:en "May"       :ru "Май")
+    (:en "June"      :ru "Июнь")
+    (:en "July"      :ru "Июль")
+    (:en "August"    :ru "Август")
+    (:en "September" :ru "Сентябрь")
+    (:en "October"   :ru "Октябрь")
+    (:en "November"  :ru "Ноябрь")
+    (:en "December"  :ru "Декабрь")))
+
 
 @export-structure
 (defstruct (datetime
@@ -77,19 +91,10 @@ the file FILENAME. If no EXIF found returns nil"
     (zpb-exif:invalid-exif-stream (err) nil)))
 
 @export
-(defun datetime-localized-month (dt)
-  (let ((month (datetime-month dt)))
-    (case month
-      (1 "January")
-      (2 "February")
-      (3 "March")
-      (4 "April")
-      (5 "May")
-      (6 "June")
-      (7 "July")
-      (8 "August")
-      (9 "September")
-      (10 "October")
-      (11 "November")
-      (12 "December")
-      (otherwise "Unknown"))))
+(defun datetime-string-month (dt &key short (locale :en))
+  "Return textual representation of the month"
+  (let* ((month (datetime-month dt))
+         (result 
+          (getf (aref mediaimport.datetime::+months+ (1- month)) locale)))
+    (if short (subseq result 0 3) result)))
+        
