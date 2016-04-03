@@ -108,7 +108,7 @@ Example:
         (push (funcall (cdr found) ts) result-list)))
     (apply (curry #'format nil new-format-string) (nreverse result-list))))
     
-(defun timestamp-based-filename (filename timestamp
+(defun timestamp-based-filename (filename timestamp pattern
                                           &key
                                           new-ext
                                           prefix)
@@ -117,20 +117,17 @@ Constructs the new filename relative path based on a file timestamp.
 Example:
 => (timestamp-based-filename \"~/Sources/lisp/README.txt\")
 \"2016-03-06/IMAGE_16-47.txt\""
-  (let ((ext (or new-ext (pathname-type filename))))
-    (format-timestamp-string "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg" timestamp)))
-#|
-(with-output-to-string (s)
-         (format s "~4,'0d-~2,'0d-~2,'0d/~@[~a~]~2,'0d_~2,'0d~@[.~a~]"
-                 (datetime-year timestamp)
-                 (datetime-month timestamp)
-                 (datetime-date timestamp)
-                 prefix
-                 (datetime-hour timestamp)
-                 (datetime-minute timestamp)
-                 ext)
-         s)))
-|#
+  (let* ((ext (pathname-type filename))
+         (new-name (format-timestamp-string pattern timestamp))
+         (new-ext (pathname-type pattern))
+         (new-dir (pathname-directory new-name))
+         (new-basename (pathname-name new-name)))
+    ;; test if we shall keep the old extension
+    (if (or (not new-ext) ;; new not specified in patterns
+            (eql new-ext :WILD) ;; new is a .*
+            (string= (string-upcase ext) (string-upcase new-ext))) ;; same
+        (make-pathname :directory new-dir :name new-basename :type ext)
+        (make-pathname :directory new-dir :name new-basename :type new-ext))))
 
 
 (defmethod construct-target-filename ((self renamer) input-filename)
@@ -146,8 +143,7 @@ information first if the file is JPEG"
                           (make-datetime-from-file input-filename)))
            (fname (timestamp-based-filename input-filename
                                             timestamp
-                                            :new-ext new-extension
-                                            :prefix prefix)))
+                                            "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg")))
       (values 
        (fad:merge-pathnames-as-file
         (fad:pathname-as-directory destination-path) fname)
