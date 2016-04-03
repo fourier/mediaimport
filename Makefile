@@ -4,3 +4,4 @@ LW_PATH := "/Applications/LispWorks 7.0 (32-bit)/LispWorks (32-bit).app/Contents
 
 all:
 	$(LW_PATH) -build delivery-script.lisp
+	cd build && zip -r ../mediaimport.zip mediaimport.app
