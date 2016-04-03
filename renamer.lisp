@@ -54,9 +54,8 @@ the input and output file name as well as the source file timestamp"))
 @export
 (defclass renamer () ((source-path :initarg :source-path)
                       (destination-path :initarg :destination-path)
-                      (prefix :initform nil :initarg :prefix)
                       (filemasks :initform nil :initarg :filemasks)
-                      (new-extension :initform nil :initarg :new-extension)
+                      (pattern :initform nil :initarg :pattern)
                       (use-exif :initform nil :initarg :use-exif)
                       (recursive :initform nil :initarg :recursive)
                       (checksums :initform (make-hash-table :test #'equal))))
@@ -73,11 +72,7 @@ the input and output file name as well as the source file timestamp"))
                                  #'ppcre:create-scanner
                                  #'wildcard-to-regex
                                  (curry #'string-trim " "))
-                                (lw:split-sequence "," filemasks))))
-    (setf new-extension (if (= (length new-extension) 0)
-                            nil
-                            (string-trim " " new-extension)))))
-
+                                (lw:split-sequence "," filemasks))))))
 (defun format-timestamp-string (pattern ts)
   "Creates a formatted string from given pattern and timestamp.
 Formatting arguments:
@@ -108,10 +103,7 @@ Example:
         (push (funcall (cdr found) ts) result-list)))
     (apply (curry #'format nil new-format-string) (nreverse result-list))))
     
-(defun timestamp-based-filename (filename timestamp pattern
-                                          &key
-                                          new-ext
-                                          prefix)
+(defun timestamp-based-filename (filename timestamp pattern)
   "TODO: this is outdated
 Constructs the new filename relative path based on a file timestamp.
 Example:
@@ -131,11 +123,12 @@ Example:
 
 
 (defmethod construct-target-filename ((self renamer) input-filename)
-  "By given INPUT-FILENAMEconstruct
-the full path to the file renamed after its timestamp
-If the :use-exif flag is set in the class instance, try to get the EXIF
-information first if the file is JPEG"
-  (with-slots (destination-path new-extension prefix use-exif) self
+  "By given INPUT-FILENAME construct
+the full path to the file renamed after its timestamp using pattern specified
+in the class instance.
+If the :use-exif flag is set in the class instance and the file is JPEG,
+try to get the EXIF information first for timestamp."
+  (with-slots (destination-path pattern use-exif) self
     (let* ((ext (string-upcase (pathname-type input-filename)))
            (timestamp (or (and (equal ext "JPG")
                                use-exif
@@ -143,7 +136,7 @@ information first if the file is JPEG"
                           (make-datetime-from-file input-filename)))
            (fname (timestamp-based-filename input-filename
                                             timestamp
-                                            "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg")))
+                                            pattern)))
       (values 
        (fad:merge-pathnames-as-file
         (fad:pathname-as-directory destination-path) fname)

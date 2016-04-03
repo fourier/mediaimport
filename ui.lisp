@@ -44,9 +44,12 @@
    (output-button push-button :text "Choose Output directory..." :callback #'on-browse-button :data 'output)
    (recursive-checkbox check-button :text "Search in subdirectories")
    (exif-checkbox check-button :text "Use EXIF for JPG")
-   (input-filemasks text-input-pane :title "Comma-separated list of file masks, like \"*.jpg,*.png\"" :text "*.jpg")
-   (output-ext text-input-pane :title "Output extension" :visible-max-width 40)
-   (prefix text-input-pane :title "Prefix (like \"Photo-\")" :text "Photo-")
+   (input-filemasks text-input-pane :title "Comma-separated list of file masks, like \"*.jpg,*.png\""
+                    :text "*.jpg"
+                    :visible-min-width '(:character 32))
+   (pattern text-input-pane :title "Output pattern"
+            :visible-min-width '(:character 32)
+            :text "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg")
    (collect-button push-button :text "Collect data" :callback #'on-collect-button)
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
@@ -75,15 +78,15 @@
                         :columns 2 :rows 2
                         :x-adjust '(:right :left)
                         :y-adjust '(:center :center))
-   (extensions-layout grid-layout '(recursive-checkbox input-filemasks
-                                                       exif-checkbox output-ext prefix nil)
-                      :columns 2 :rows 3
+   (options-layout grid-layout '(input-filemasks recursive-checkbox 
+                                                 pattern exif-checkbox)
+                      :columns 2 :rows 2
                       :x-adjust '(:left :right)
                       :y-adjust '(:center :center))
    (progress-layout switchable-layout '(nil progress-bar))
     
    (main-layout column-layout '(input-output-layout
-                                extensions-layout
+                                options-layout
                                 collect-button
                                 proposal-table 
                                 copy-button
@@ -176,8 +179,7 @@
   (with-slots (input-directory-field
                output-directory-field
                input-filemasks
-               output-ext
-               prefix
+               pattern
                recursive-checkbox
                exif-checkbox) self
     (let ((source-path (text-input-pane-text input-directory-field))
@@ -190,14 +192,12 @@
               ;; do processing only when directories are not the same
               ((not (equalp (truename source-path) (truename dest-path)))
                (let* ((masks (text-input-pane-text input-filemasks))
-                      (new-extension (text-input-pane-text output-ext))
-                      (prefix-text (text-input-pane-text prefix))
+                      (pattern-text (text-input-pane-text pattern))
                       (r (make-instance 'renamer
                                         :source-path source-path
                                         :destination-path dest-path
-                                        :prefix prefix-text
+                                        :pattern pattern-text
                                         :filemasks masks
-                                        :new-extension new-extension
                                         :use-exif (button-selected exif-checkbox)
                                         :recursive (button-selected recursive-checkbox))))
                  (toggle-progress self t :end 1)
