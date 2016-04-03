@@ -167,11 +167,8 @@ MEDIAIMPORT> (integer-format 11 3)
                            
 \"011\""
   (let ((fmt
-         (with-output-to-string (s)
-           (format s "~~~d,'0d" digits)
-           s)))
-    (with-output-to-string (s)
-      (format s fmt number))))
+         (format nil "~~~d,'0d" digits)))
+    (format nil fmt number)))
 
 (defun bump-file-name (filename &optional new-version)
   "Returns a bumped file name by given FILENAME. Bumped means
@@ -452,8 +449,7 @@ In case of success 2nd argument is nil."
                        (copy-file from to)
                        nil)
                    (file-error (err)
-                     (with-output-to-string (s)
-                       (format s "~a" err)))))))
+                     (format nil "~a" err))))))
             ;; if callback function is provided, call it
        (when callback
          (funcall callback i result))))

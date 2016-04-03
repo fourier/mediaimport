@@ -252,8 +252,7 @@
     ;; make sense only for those with target
     (when (file-candidate-target item)
       (let ((message 
-             (with-output-to-string (s)
-               (format s "Rename ~a" (namestring (file-candidate-source item))))))
+             (format nil "Rename ~a" (namestring (file-candidate-source item)))))
         (multiple-value-bind (fname result) 
             (prompt-for-string message :text (namestring (file-candidate-target item)))
           (when (and result
