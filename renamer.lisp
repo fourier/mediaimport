@@ -13,6 +13,7 @@
   "Hash table containing mapping between timestamp pseudo-formatting
 and FORMAT formatting")
 
+
 ;; fill the +timestamp-format-mapping+
 (eval-when (:compile-toplevel :load-toplevel)
   (setf (gethash "{YYYY}" +timestamp-format-mapping+)
@@ -35,7 +36,8 @@ and FORMAT formatting")
         (cons "~2,'0d" #'datetime-minute)
         (gethash "{ss}" +timestamp-format-mapping+)
         (cons "~2,'0d" #'datetime-second)))
-        
+
+
 @export-class
 (defclass file-candidate ()
   ((source :accessor file-candidate-source :initarg :source
@@ -66,15 +68,19 @@ the input and output file name as well as the source file timestamp"))
                                  :documentation "File masks. In constructor one provides a string like \"*.jpg, *.png\" and it is converted to the list of regexps matching those filemasks")
                       (pattern :initform nil :initarg :pattern
                                :documentation "Renaming pattern. Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\". If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions")
-                      (use-exif :initform nil :initarg :use-exif)
-                      (recursive :initform nil :initarg :recursive)
-                      (checksums :initform (make-hash-table :test #'equal)))
+                      (use-exif :initform nil :initarg :use-exif
+                                :documentation "Boolean flag specifying if we need to try to extract information from EXIF. It takes little longer and not needed for example for movies")
+                      (recursive :initform nil :initarg :recursive
+                                 :documentation "Boolean flag specifying if we need to descend to subdirectories to collect list of files")
+                      (checksums :initform (make-hash-table :test #'equal)
+                                 :documentation "Cache of calculated checksums"))
   (:documentation "Renamer class encapsulates all the necessary information
 needed for collecting files for copying/processing and creates a list
 of candidates for copy/process"))
 
+
 (defmethod initialize-instance :after ((self renamer) &key)
-  (with-slots (source-path destination-path filemasks new-extension) self
+  (with-slots (source-path destination-path filemasks) self
     ;; process paths
     (setf source-path (truename source-path))
     (setf destination-path (truename destination-path))
@@ -86,6 +92,8 @@ of candidates for copy/process"))
                                  #'wildcard-to-regex
                                  (curry #'string-trim " "))
                                 (lw:split-sequence "," filemasks))))))
+
+
 (defun format-timestamp-string (pattern ts)
   "Creates a formatted string from given pattern and timestamp.
 Formatting arguments:
@@ -96,6 +104,7 @@ Formatting arguments:
 {hh}    - hour
 {mm}    - minute
 {ss}    - second
+
 Example:
 => (format-timestamp-string \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.JPG\" (make-datetime-from-string \"2011:01:02 13:28:33333\"))
 \"2011-01-02/Photo-13_28.JPG\""
@@ -115,13 +124,15 @@ Example:
       (when-let (found (gethash key +timestamp-format-mapping+))
         (push (funcall (cdr found) ts) result-list)))
     (apply (curry #'format nil new-format-string) (nreverse result-list))))
-    
+
+
 (defun timestamp-based-filename (filename timestamp pattern)
-  "TODO: this is outdated
-Constructs the new filename relative path based on a file timestamp.
+  "Constructs the new filename relative path based on a file TIMESTAMP
+using PATTERN. See FORMAT-TIMESTAMP-STRING for pattern description.
+
 Example:
-=> (timestamp-based-filename \"~/Sources/lisp/README.txt\")
-\"2016-03-06/IMAGE_16-47.txt\""
+=> (timestamp-based-filename \"~/Sources/lisp/README.txt\" (make-datetime-from-string \"2011:01:02 13:28:33333\") \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.JPG\")
+#P\"2011-01-02/Photo-13_28.JPG\""
   (let* ((ext (pathname-type filename))
          (new-name (format-timestamp-string pattern timestamp))
          (new-ext (pathname-type pattern))
@@ -155,6 +166,7 @@ try to get the EXIF information first for timestamp."
         (fad:pathname-as-directory destination-path) fname)
        timestamp))))
 
+
 (defun integer-format (number digits)
   "Convert NUMBER to string with at least DIGITS digits.
 Examples:
@@ -171,6 +183,7 @@ MEDIAIMPORT> (integer-format 11 3)
   (let ((fmt
          (format nil "~~~d,'0d" digits)))
     (format nil fmt number)))
+
 
 (defun bump-file-name (filename &optional new-version)
   "Returns a bumped file name by given FILENAME. Bumped means
@@ -212,6 +225,7 @@ Examples:
                        (ppcre:regex-replace "-(\\d+$)" basename new-trailer)
                        (concatenate 'string basename new-trailer))))
     (make-pathname :directory dir :name new-name :type ext)))
+
 
 (defun get-maximum-file-version (filenames)
   "By given the FILENAMES - list of file names of the same filemask,
@@ -268,6 +282,7 @@ Example:
                  basename "(-(\\d+))?"
                  (when ext (concatenate 'string ".(?i)" ext))
                  "$")))
+
 
 (defun find-similar-files (filename)
   "Using the FILENAME try to create a list of similar files from
@@ -377,6 +392,7 @@ all of them"
                 (setf new-candidates others))))))
   candidates)
 
+
 @export
 (defmethod create-list-of-candidates ((self renamer) &key total-fun progress-fun)
   "Creates a final list of candidates. The main function of the renamer class,
@@ -395,6 +411,7 @@ to the value received in TOTAL-FUN."
                                           (ceiling (/ (length candidates) 10.0)))))
     (bump-similar-candidates self
                              (verify-against-existing self candidates :progress-fun progress-fun))))
+
 
 (defun check-if-equal (filename1 filename2 &optional checksum-hash)
   "Test if 2 files are equal.
@@ -457,7 +474,6 @@ In case of success 2nd argument is nil."
          (funcall callback i result))))
      (length file-candidates)))
   
-           
 
 @export
 (defun init()

@@ -27,6 +27,7 @@
   "Simple date/time structure"
   year month date hour minute second)
 
+
 @export
 (defmethod print-object ((self datetime) out)
   "Print overload for DATETIME struct"
@@ -35,6 +36,7 @@
           (datetime-year self) (datetime-month self) (datetime-date self)
           ;; hour:minute:second
           (datetime-hour self) (datetime-minute self) (datetime-second self)))
+
 
 @export
 (defun make-datetime-from-string (str)
@@ -48,6 +50,7 @@ Example:
                                                   (lw:split-sequence ":" x))
                                                 (lw:split-sequence " " str))))))
     (apply #'create-datetime parsed-numbers)))
+
 
 @export
 (defun make-datetime-from-gps-timestamps (gds gts)
@@ -69,6 +72,7 @@ The GPSTimeStamp is in format like #(18 29 299/10)"
     (make-datetime :year year :month month :date date
                    :hour hour :minute minute :second second)))
 
+
 @export
 (defun make-datetime-from-exif (filename)
   "Create a datetime struct from the EXIF information contianing in
@@ -89,6 +93,7 @@ the file FILENAME. If no EXIF found returns nil"
               ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
                (make-datetime-from-gps-timestamps gds gts))))
     (zpb-exif:invalid-exif-stream (err) nil)))
+
 
 @export
 (defun datetime-string-month (dt &key short (locale :en))

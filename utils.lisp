@@ -40,6 +40,7 @@ Example:
              (setf parity (not parity))))
     result))
 
+
 @export
 (defun partition (seq predicate)
   "Split the SEQ of type list by PREDICATE, returning the VALUES,
@@ -48,7 +49,6 @@ and 2nd is the list of elements for which PREDICATE is false."
   (let ((pos (remove-if-not predicate seq))
         (neg (delete-if predicate seq)))
     (values pos neg)))
-    
 
 
 @export
@@ -56,6 +56,7 @@ and 2nd is the list of elements for which PREDICATE is false."
   "Return the size of the file with the name FILENAME in bytes"
   (with-open-file (in filename :element-type '(unsigned-byte 8))
     (file-length in)))
+
 
 @export
 (defun read-header (filename size)
