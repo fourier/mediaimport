@@ -13,4 +13,4 @@ Media Import is a simple OSX utility for copying images(and other files) accordi
 [This](https://github.com/fourier/mediaimport/raw/master/mediaimport.zip) archive contains the latest version.
 
 ## Copyright
-Copyright (c) [Alexey Veretennikov](mailto:alexey.veretennikov@gmail.com). Permission to use for personal reasons only.
+Copyright (c) [Alexey Veretennikov](mailto:alexey.veretennikov@gmail.com). Permitted to use for personal reasons only.
