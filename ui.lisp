@@ -33,9 +33,94 @@
                                   :sort 'string-lessp
                                   :reverse-sort 'string-greaterp)))
 
+;;----------------------------------------------------------------------------
+;; The application interface
+;;----------------------------------------------------------------------------
+
+(define-interface cocoa-application-interface (cocoa-default-application-interface)
+  ((main-window :initform nil
+                :accessor main-window))
+  (:menus
+   (application-menu
+    "Media Import"
+    ((:component
+      (("About Media Import"
+        :callback 'show-about-window
+        :callback-type :none)))
+     (:component
+      (("Preferences..."
+        :callback 'show-preferences-window
+        :callback-type :none)))
+     (:component
+      ()
+      ;; This is a special named component where the CAPI will
+      ;; attach the standard Services menu.
+      :name :application-services)
+     (:component
+      (("Hide Media Import"
+        :accelerator "accelerator-h"
+        :callback-data :hidden)
+       ("Hide Others"
+        :accelerator "accelerator-meta-h"
+        :callback-data :others-hidden)
+       ("Show All"
+        :callback-data :all-normal))
+      :callback #'(setf top-level-interface-display-state)
+      :callback-type :data-interface)
+     (:component
+      (("Quit Media Import"
+        :accelerator "accelerator-q"
+        :callback 'destroy
+        :callback-type :interface)))))
+   (edit-menu
+    "Edit"
+    ((:component
+      (("Undo"
+        :enabled-function 'active-pane-undo-p
+        :callback 'active-pane-undo
+        :callback-type :none)))
+     (:component     
+      (("Cut"
+        :enabled-function 'active-pane-cut-p
+        :callback 'active-pane-cut
+        :callback-type :none)
+       ("Copy"
+        :enabled-function 'active-pane-copy-p
+        :callback 'active-pane-copy
+        :callback-type :none)
+       ("Paste" 
+        :enabled-function 'active-pane-paste-p
+        :callback 'active-pane-paste
+        :callback-type :none)
+       ("Select All"
+        :enabled-function 'active-pane-select-all-p
+        :callback 'active-pane-select-all
+        :callback-type :none))))))
+  (:menu-bar application-menu edit-menu)
+  (:default-initargs
+   :title "Media Import"
+   :application-menu 'application-menu
+;;   :message-callback 'on-message
+   :destroy-callback 'on-destroy))
+
+(defun on-destroy (application)
+  (with-slots (main-window) application
+    (when main-window
+      ;; Set main-window to nil to prevent recursion back from
+      ;; drawing-interface's destroy-callback.
+      (setf (slot-value main-window 'application-interface) nil)
+      ;; Destroy the single  window.  When run as a delivered
+      ;; application, this will cause the application to exit because it
+      ;; has no more windows.
+      (destroy main-window))))
+
+;;----------------------------------------------------------------------------
+;; The main window interface
+;;----------------------------------------------------------------------------
 (define-interface main-window ()
   ;; slots
-  ((duplicates :initform nil))
+  ((application-interface :initarg :application-interface)
+   (duplicates :initform nil))
   ;; ui elements
   (:panes
    (input-directory-field text-input-pane :callback #'on-collect-button)
@@ -351,5 +436,9 @@ background operations happened"
 @export
 (defun main ()
   (init)
-  (setf *main-window* (make-instance 'main-window))
-  (display *main-window*))
+  (let ((application (make-instance 'cocoa-application-interface)))
+    (set-application-interface application)
+    (setf *main-window* (make-instance 'main-window
+                                       :application-interface application))
+    (setf (main-window application) *main-window*)
+    (display *main-window*)))
