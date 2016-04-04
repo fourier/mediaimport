@@ -24,10 +24,13 @@
 ;;; to create the bundle.
 (compile-file (sys:example-file "configuration/macos-application-bundle.lisp") :load t)
 
-(deliver 'mediaimport.ui:main 
-         (when (save-argument-real-p)
-                 (write-macos-application-bundle
-                   "~/Sources/lisp/mediaimport/build/mediaimport"))
+(deliver 'mediaimport.ui:main
+         (create-macos-application-bundle
+          "~/Sources/lisp/mediaimport/Media Import.app"
+          ;; Do not copy file associations...
+          :document-types nil
+          ;; ...or CFBundleIdentifier from the LispWorks bundle
+          :identifier "com.github.fourier.mediaimport")
          5
          :interface :capi
          :startup-bitmap-file nil)

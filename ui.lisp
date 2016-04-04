@@ -45,12 +45,14 @@
     "Media Import"
     ((:component
       (("About Media Import"
-        :callback 'show-about-window
+        :callback 'on-about-window
         :callback-type :none)))
+#|   ;; no preferences for now
      (:component
       (("Preferences..."
         :callback 'show-preferences-window
         :callback-type :none)))
+|#     
      (:component
       ()
       ;; This is a special named component where the CAPI will
@@ -179,10 +181,12 @@
                 :adjust :center
                 :y-ratios '(nil nil nil 1 nil nil)))
   ;; all other properties
-  (:default-initargs :title "Media Import"
+  (:default-initargs
+   :title "Media Import"
    :visible-min-width 800
    :layout 'main-layout
-   :initial-focus 'input-directory-field))
+   :initial-focus 'input-directory-field
+   :help-callback #'on-main-window-tooltip))
 
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
   (setf (button-enabled (slot-value self 'copy-button)) nil))
@@ -241,6 +245,12 @@
                (update-candidate cand duplicates
                                  (alexandria:curry #'redisplay-collection-item proposal-table)))
           candidates)))
+
+
+(defun on-about-window ()
+  (capi:display-message-on-screen (capi:convert-to-screen nil)
+                                  "Media Import utility~%~a"
+                                  "Copyright (c) 2016 Alexey Veretennikov"))
 
 
 (defun on-browse-button (data self)
@@ -430,6 +440,24 @@ background operations happened"
           (text-input-pane-enabled output-directory-field) enable)))
 
 
+(defmethod on-main-window-tooltip ((self main-window) pane type key)
+  (when (eq type :tooltip) ;; the only possible type on Cocoa
+    (ecase key
+      (pattern
+       "The output file pattern.
+Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\".
+If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions.
+Possible templates:
+{YYYY}  - year, like 1999
+{MM}    - month, like 01
+{DD}    - day, like 31
+{MONTH} - month name, like January
+{MON}   - 3 letters month abbreviation, like Nov
+{МЕСЯЦ} - russian month name
+{МЕС}   - russian month abbreviation
+{hh}    - hour, in 24-hours format
+{mm}    - minute
+{ss}    - second"))))
 
                          
 
