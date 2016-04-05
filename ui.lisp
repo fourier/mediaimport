@@ -105,8 +105,9 @@
 ;;   :message-callback 'on-message
    :destroy-callback 'on-destroy))
 
-(defun on-destroy (application)
-  (with-slots (main-window) application
+(defmethod on-destroy ((self cocoa-application-interface))
+  (format t "on-destroy~%")
+  (with-slots (main-window) self
     (when main-window
       ;; Set main-window to nil to prevent recursion back from
       ;; drawing-interface's destroy-callback.
@@ -137,6 +138,9 @@
    (pattern text-input-pane :title "Output pattern"
             :visible-min-width '(:character 32)
             :text "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg")
+   (command-checkbox check-button :text "Use custom command")
+   (command-edit text-input-pane :visible-min-width '(:character 40))
+   (save-script-button push-button :text "Save as script" :callback #'on-save-script)
    (collect-button push-button :text "Collect data" :callback #'on-collect-button)
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
@@ -170,10 +174,14 @@
                       :columns 2 :rows 2
                       :x-adjust '(:left :right)
                       :y-adjust '(:center :center))
+   (command-layout row-layout '(command-checkbox command-edit save-script-button)
+                   :adjust :center
+                   :x-ratios '(nil 1 nil))
    (progress-layout switchable-layout '(nil progress-bar))
     
    (main-layout column-layout '(input-output-layout
                                 options-layout
+                                command-layout
                                 collect-button
                                 proposal-table 
                                 copy-button
@@ -186,7 +194,8 @@
    :visible-min-width 800
    :layout 'main-layout
    :initial-focus 'input-directory-field
-   :help-callback #'on-main-window-tooltip))
+   :help-callback #'on-main-window-tooltip
+   :destroy-callback #'on-destroy))
 
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
   (setf (button-enabled (slot-value self 'copy-button)) nil))
@@ -459,7 +468,22 @@ Possible templates:
 {mm}    - minute
 {ss}    - second"))))
 
-                         
+
+(defmethod on-save-script (data (self main-window))
+  (declare (ignore data))
+  (display-message "Save script"))
+
+
+(defmethod on-destroy ((self main-window))
+  (format t "on-destroy-window~%")
+  (with-slots (application-interface) self
+    (when application-interface
+      ;; Set main-window to nil to prevent recursion back from
+      ;; application-interface's destroy-callback.
+      (setf (main-window application-interface) nil)
+      ;; Quit by destroying the application interface.
+      (capi:destroy application-interface))))
+
 
 @export
 (defun main ()
