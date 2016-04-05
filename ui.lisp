@@ -106,7 +106,6 @@
    :destroy-callback 'on-destroy))
 
 (defmethod on-destroy ((self cocoa-application-interface))
-  (format t "on-destroy~%")
   (with-slots (main-window) self
     (when main-window
       ;; Set main-window to nil to prevent recursion back from
@@ -126,21 +125,26 @@
    (duplicates :initform nil))
   ;; ui elements
   (:panes
-   (input-directory-field text-input-pane :callback #'on-collect-button)
+   (input-directory-edit text-input-pane :callback #'on-collect-button)
    (input-button push-button :text "Choose Input directory..." :callback #'on-browse-button :data 'input )
-   (output-directory-field text-input-pane :callback #'on-collect-button)
+   (output-directory-edit text-input-pane :callback #'on-collect-button)
    (output-button push-button :text "Choose Output directory..." :callback #'on-browse-button :data 'output)
    (recursive-checkbox check-button :text "Search in subdirectories")
    (exif-checkbox check-button :text "Use EXIF for JPG")
-   (input-filemasks text-input-pane :title "Comma-separated list of file masks, like \"*.jpg,*.png\""
+   (input-filemasks-edit text-input-pane :title "Comma-separated list of file masks, like \"*.jpg,*.png\""
                     :text "*.jpg"
-                    :visible-min-width '(:character 32))
+                    :visible-min-width '(:character 32)
+                    :callback #'on-collect-button)
    (pattern text-input-pane :title "Output pattern"
             :visible-min-width '(:character 32)
-            :text "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg")
-   (command-checkbox check-button :text "Use custom command")
-   (command-edit text-input-pane :visible-min-width '(:character 40))
-   (save-script-button push-button :text "Save as script" :callback #'on-save-script)
+            :text "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg"
+            :callback #'on-collect-button)
+   (command-checkbox check-button :text "Use custom command"
+                     :callback #'on-command-checkbox
+                     :retract-callback #'on-command-checkbox)
+   (command-edit text-input-pane :visible-min-width '(:character 40)
+                 :callback #'on-collect-button)
+   (save-script-button push-button :text "Save as script" :callback #'on-save-script-button)
    (collect-button push-button :text "Collect data" :callback #'on-collect-button)
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
@@ -164,12 +168,12 @@
    (progress-bar progress-bar))
   ;; Layout
   (:layouts
-   (input-output-layout grid-layout '(input-button input-directory-field
-                                                   output-button output-directory-field)
+   (input-output-layout grid-layout '(input-button input-directory-edit
+                                                   output-button output-directory-edit)
                         :columns 2 :rows 2
                         :x-adjust '(:right :left)
                         :y-adjust '(:center :center))
-   (options-layout grid-layout '(input-filemasks recursive-checkbox 
+   (options-layout grid-layout '(input-filemasks-edit recursive-checkbox 
                                                  pattern exif-checkbox)
                       :columns 2 :rows 2
                       :x-adjust '(:left :right)
@@ -187,18 +191,19 @@
                                 copy-button
                                 progress-layout)
                 :adjust :center
-                :y-ratios '(nil nil nil 1 nil nil)))
+                :y-ratios '(nil nil nil nil 1 nil nil)))
   ;; all other properties
   (:default-initargs
    :title "Media Import"
    :visible-min-width 800
    :layout 'main-layout
-   :initial-focus 'input-directory-field
+   :initial-focus 'input-directory-edit
    :help-callback #'on-main-window-tooltip
    :destroy-callback #'on-destroy))
 
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
-  (setf (button-enabled (slot-value self 'copy-button)) nil))
+  (setf (button-enabled (slot-value self 'copy-button)) nil)
+  (toggle-custom-command self nil))
 
 
 (defclass file-candidate-item (file-candidate)
@@ -263,14 +268,14 @@
 
 
 (defun on-browse-button (data self)
-  (with-slots (input-directory-field output-directory-field) self
+  (with-slots (input-directory-edit output-directory-edit) self
     (let ((field nil)
           (message nil))
       (cond ((eql data 'input)
-             (setf field input-directory-field
+             (setf field input-directory-edit
                    message "Import from"))
             ((eql data 'output)
-             (setf field output-directory-field
+             (setf field output-directory-edit
                    message "Export to")))
       (multiple-value-bind (dir result) (prompt-for-directory message)
         (when result
@@ -280,14 +285,14 @@
 (defun on-collect-button (data self)
   ;; could be called from edit fields or as a button itself
   (declare (ignore data))
-  (with-slots (input-directory-field
-               output-directory-field
-               input-filemasks
+  (with-slots (input-directory-edit
+               output-directory-edit
+               input-filemasks-edit
                pattern
                recursive-checkbox
                exif-checkbox) self
-    (let ((source-path (text-input-pane-text input-directory-field))
-          (dest-path (text-input-pane-text output-directory-field)))
+    (let ((source-path (text-input-pane-text input-directory-edit))
+          (dest-path (text-input-pane-text output-directory-edit)))
       (when (and (> (length source-path) 0) (> (length dest-path) 0))
         (cond ((not (directory-exists-p source-path))
                (display-message "Directory ~s doesn't exist" source-path))
@@ -295,7 +300,7 @@
                (display-message "Directory ~s doesn't exist" dest-path))
               ;; do processing only when directories are not the same
               ((not (equalp (truename source-path) (truename dest-path)))
-               (let* ((masks (text-input-pane-text input-filemasks))
+               (let* ((masks (text-input-pane-text input-filemasks-edit))
                       (pattern-text (text-input-pane-text pattern))
                       (r (make-instance 'renamer
                                         :source-path source-path
@@ -439,14 +444,14 @@ background operations happened"
                collect-button
                input-button
                output-button
-               input-directory-field
-               output-directory-field) self
+               input-directory-edit
+               output-directory-edit) self
     (setf (button-enabled copy-button) enable
           (button-enabled collect-button) enable
           (button-enabled input-button) enable
           (button-enabled output-button) enable
-          (text-input-pane-enabled input-directory-field) enable
-          (text-input-pane-enabled output-directory-field) enable)))
+          (text-input-pane-enabled input-directory-edit) enable
+          (text-input-pane-enabled output-directory-edit) enable)))
 
 
 (defmethod on-main-window-tooltip ((self main-window) pane type key)
@@ -469,13 +474,14 @@ Possible templates:
 {ss}    - second"))))
 
 
-(defmethod on-save-script (data (self main-window))
+(defmethod on-save-script-button (data (self main-window))
+  "Callback called on Save script button"
   (declare (ignore data))
   (display-message "Save script"))
 
 
 (defmethod on-destroy ((self main-window))
-  (format t "on-destroy-window~%")
+  ""
   (with-slots (application-interface) self
     (when application-interface
       ;; Set main-window to nil to prevent recursion back from
@@ -485,6 +491,18 @@ Possible templates:
       (capi:destroy application-interface))))
 
 
+(defmethod on-command-checkbox (data (self main-window))
+  "Callback called when toggled command checkbox"
+  (declare (ignore data))
+  (with-slots (command-checkbox) self
+    (format t "on-command-checkbox: ~a" (button-selected command-checkbox))
+    (toggle-custom-command self (button-selected command-checkbox))))
+
+(defmethod toggle-custom-command ((self main-window) enable)
+  "Toggle appropriate UI elements when command checkbox is triggered"
+  (with-slots (save-script-button command-edit) self
+    (setf (button-enabled save-script-button) enable
+          (text-input-pane-enabled command-edit) enable)))
 @export
 (defun main ()
   (init)
