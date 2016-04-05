@@ -135,7 +135,7 @@
                     :text "*.jpg"
                     :visible-min-width '(:character 32)
                     :callback #'on-collect-button)
-   (pattern text-input-pane :title "Output pattern"
+   (pattern-edit text-input-pane :title "Output pattern"
             :visible-min-width '(:character 32)
             :text "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg"
             :callback #'on-collect-button)
@@ -174,7 +174,7 @@
                         :x-adjust '(:right :left)
                         :y-adjust '(:center :center))
    (options-layout grid-layout '(input-filemasks-edit recursive-checkbox 
-                                                 pattern exif-checkbox)
+                                                      pattern-edit exif-checkbox)
                       :columns 2 :rows 2
                       :x-adjust '(:left :right)
                       :y-adjust '(:center :center))
@@ -288,7 +288,7 @@
   (with-slots (input-directory-edit
                output-directory-edit
                input-filemasks-edit
-               pattern
+               pattern-edit
                recursive-checkbox
                exif-checkbox) self
     (let ((source-path (text-input-pane-text input-directory-edit))
@@ -301,7 +301,7 @@
               ;; do processing only when directories are not the same
               ((not (equalp (truename source-path) (truename dest-path)))
                (let* ((masks (text-input-pane-text input-filemasks-edit))
-                      (pattern-text (text-input-pane-text pattern))
+                      (pattern-text (text-input-pane-text pattern-edit))
                       (r (make-instance 'renamer
                                         :source-path source-path
                                         :destination-path dest-path
@@ -457,7 +457,7 @@ background operations happened"
 (defmethod on-main-window-tooltip ((self main-window) pane type key)
   (when (eq type :tooltip) ;; the only possible type on Cocoa
     (ecase key
-      (pattern
+      (pattern-edit
        "The output file pattern.
 Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\".
 If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions.
@@ -471,7 +471,13 @@ Possible templates:
 {МЕС}   - russian month abbreviation
 {hh}    - hour, in 24-hours format
 {mm}    - minute
-{ss}    - second"))))
+{ss}    - second")
+      (command-edit
+       "The custom command pattern.
+Example: \"convert -resize 1024x768 {SOURCE} {TARGET}
+Possible templates:
+{SOURCE} full path to the source file
+{TARGET} full path to the target file"))))
 
 
 (defmethod on-save-script-button (data (self main-window))
