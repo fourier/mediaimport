@@ -123,6 +123,7 @@
   ;; slots
   ((application-interface :initarg :application-interface)
    (duplicates :initform nil))
+
   ;; ui elements
   (:panes
    (input-directory-edit text-input-pane :callback #'on-collect-button)
@@ -164,6 +165,7 @@
                               (:title "Comments" 
                                :adjust :left 
                                :visible-min-width (:character 45))))
+   (output-edit collector-pane :buffer-name "Output buffer")
    (copy-button push-button :text "Copy..." :callback #'on-copy-button)
    (progress-bar progress-bar))
   ;; Layout
@@ -181,13 +183,19 @@
    (command-layout row-layout '(command-checkbox command-edit save-script-button)
                    :adjust :center
                    :x-ratios '(nil 1 nil))
+   (proposal-and-output-layout tab-layout '(proposal-table output-edit)
+                               :print-function 'car
+                               :visible-child-function 'second
+                               :items '(("Files" proposal-table)
+                                        ("Output" output-edit)))
    (progress-layout switchable-layout '(nil progress-bar))
     
    (main-layout column-layout '(input-output-layout
                                 options-layout
                                 command-layout
                                 collect-button
-                                proposal-table 
+                                proposal-and-output-layout
+                                ;proposal-table 
                                 copy-button
                                 progress-layout)
                 :adjust :center
@@ -200,6 +208,7 @@
    :initial-focus 'input-directory-edit
    :help-callback #'on-main-window-tooltip
    :destroy-callback #'on-destroy))
+
 
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
   (setf (button-enabled (slot-value self 'copy-button)) nil)
@@ -483,7 +492,8 @@ Possible templates:
 (defmethod on-save-script-button (data (self main-window))
   "Callback called on Save script button"
   (declare (ignore data))
-  (display-message "Save script"))
+  (with-slots (output-edit) self
+    (system:call-system-showing-output "ls" :current-directory "~/Sources/lisp" :output-stream (collector-pane-stream output-edit))))
 
 
 (defmethod on-destroy ((self main-window))
