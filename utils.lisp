@@ -1,6 +1,6 @@
 ;;;; mediaimport.lisp
 (defpackage #:mediaimport.utils
-  (:use #:cl #:cl-annot.class))
+  (:use #:cl #:cl-annot.class #:alexandria))
 
 (in-package #:mediaimport.utils)
 (annot:enable-annot-syntax)
@@ -151,4 +151,28 @@ Example:
         regex)))
 
 
-    
+@export
+(defun format-string (pattern object mappings)
+  "Creates a formatted string from given PATTERN, OBJECT and MAPPINGS.
+Here the PATTERN is any string containing formatting arguments.
+The MAPPINGS is a hashtable with the formatting as a key and a pair
+(real format function argument, getter).
+Here the format function argument is what should be used to format
+the value received from OBJECT by calling a getter."
+  (let* ((regex
+          (format nil "(~{~A~^|~})"
+                  (hash-table-keys mappings)))
+         (matches (ppcre:all-matches-as-strings regex pattern))
+         (result-list nil)
+         (new-format-string (copy-seq pattern)))
+    ;; create a format string replacing the templates like "{yyyy}" with
+    ;; corresponding formatting options
+    (maphash (lambda (key val)
+               (setf new-format-string (ppcre:regex-replace-all key new-format-string (car val))))
+             mappings)
+    ;; collect all values in the correct order
+    (dolist (key matches)
+      (when-let (found (gethash key mappings))
+        (push (funcall (cdr found) object) result-list)))
+    (apply (curry #'format nil new-format-string) (nreverse result-list))))
+  

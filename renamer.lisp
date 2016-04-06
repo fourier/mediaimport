@@ -11,31 +11,12 @@
 (defconstant +timestamp-format-mapping+
   (make-hash-table :test #'string=)
   "Hash table containing mapping between timestamp pseudo-formatting
-and FORMAT formatting")
+and (FORMAT formatting + getter function)")
 
-
-;; fill the +timestamp-format-mapping+
-(eval-when (:compile-toplevel :load-toplevel)
-  (setf (gethash "{YYYY}" +timestamp-format-mapping+)
-        (cons "~4,'0d" #'datetime-year)
-        (gethash "{MM}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-month)
-        (gethash "{MONTH}" +timestamp-format-mapping+)
-        (cons "~a" #'datetime-string-month)
-        (gethash "{MON}" +timestamp-format-mapping+)
-        (cons "~a" (lambda (x) (datetime-string-month x :short t)))
-        (gethash "{МЕСЯЦ}" +timestamp-format-mapping+)
-        (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
-        (gethash "{МЕС}" +timestamp-format-mapping+)
-        (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
-        (gethash "{DD}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-date)
-        (gethash "{hh}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-hour)
-        (gethash "{mm}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-minute)
-        (gethash "{ss}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-second)))
+(defconstant +command-format-mapping+
+  (make-hash-table :test #'string=)
+  "Hash table containing mapping between command pseudo-formatting
+and (FORMAT formatting + getter function")
 
 
 @export-class
@@ -57,6 +38,36 @@ the input and output file name as well as the source file timestamp"))
     (format out "~%   Source: ~s" (file-candidate-source self))
     (format out "~%   Target: ~s" (file-candidate-target self))
     (format out "~%   Comment: ~s" (file-candidate-comment self))))
+
+
+;; fill the +timestamp-format-mapping+ and +command-format-mapping+
+(eval-when (:compile-toplevel :load-toplevel)
+  (setf (gethash "{YYYY}" +timestamp-format-mapping+)
+        (cons "~4,'0d" #'datetime-year)
+        (gethash "{MM}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-month)
+        (gethash "{MONTH}" +timestamp-format-mapping+)
+        (cons "~a" #'datetime-string-month)
+        (gethash "{MON}" +timestamp-format-mapping+)
+        (cons "~a" (lambda (x) (datetime-string-month x :short t)))
+        (gethash "{МЕСЯЦ}" +timestamp-format-mapping+)
+        (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
+        (gethash "{МЕС}" +timestamp-format-mapping+)
+        (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
+        (gethash "{DD}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-date)
+        (gethash "{hh}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-hour)
+        (gethash "{mm}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-minute)
+        (gethash "{ss}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-second))
+  (setf (gethash "{SOURCE}" +command-format-mapping+)
+        (cons "~s" (compose #'namestring #'file-candidate-source))
+        (gethash "{TARGET}" +command-format-mapping+)
+        (cons "~s" (compose #'namestring #'file-candidate-target))))
+        
+
 
 
 @export
@@ -108,22 +119,7 @@ Formatting arguments:
 Example:
 => (format-timestamp-string \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.JPG\" (make-datetime-from-string \"2011:01:02 13:28:33333\"))
 \"2011-01-02/Photo-13_28.JPG\""
-  (let* ((regex
-          (format nil "(~{~A~^|~})"
-                  (hash-table-keys +timestamp-format-mapping+)))
-         (matches (ppcre:all-matches-as-strings regex pattern))
-         (result-list nil)
-         (new-format-string (copy-seq pattern)))
-    ;; create a format string replacing the templates like "{yyyy}" with
-    ;; corresponding formatting options
-    (maphash (lambda (key val)
-               (setf new-format-string (ppcre:regex-replace-all key new-format-string (car val))))
-             +timestamp-format-mapping+)
-    ;; collect all values in the correct order
-    (dolist (key matches)
-      (when-let (found (gethash key +timestamp-format-mapping+))
-        (push (funcall (cdr found) ts) result-list)))
-    (apply (curry #'format nil new-format-string) (nreverse result-list))))
+  (format-string pattern ts +timestamp-format-mapping+))
 
 
 (defun timestamp-based-filename (filename timestamp pattern)
@@ -473,6 +469,48 @@ In case of success 2nd argument is nil."
        (when callback
          (funcall callback i result))))
      (length file-candidates)))
+
+
+(defun format-command-string (pattern cand)
+  "Creates a formatted string from given pattern and candidate.
+Formatting arguments:
+{SOURCE} - source file
+{TARGET} - target file
+Example:
+=> "
+  (format-string pattern cand +command-format-mapping+))
+
+
+@export
+(defun apply-command-to-files (file-candidates command-pattern
+                                               &key callback stream script)
+  "Applies the command-patten to all candidates from the array FILE-CANDIDATES
+CALLBACK could be nil; if not nil, CALLBACK is a function which
+is called every time file copied.
+CALLBACK is a function of 2 arguments: index of the element in the
+FILE-CANDIDATES array and a string error-text if an error happened.
+In case of success 2nd argument is nil.
+STREAM is a stream to redirect output to"
+  (when script
+    (format stream "#!/bin/sh~%"))
+  (map-iota
+   (lambda (i)
+     (let* ((cand (aref file-candidates i))
+            (result 0)
+            (command ""))
+       (when (and stream (file-candidate-target cand))
+         (setf command (format-command-string command-pattern cand)
+               result (if (not script)
+                          (system:call-system-showing-output
+                           command
+                           :output-stream stream
+                           :prefix "")
+                          (format stream "~a~%" command))))
+       (when callback
+         (funcall callback i (when (/= 0 result)
+                               (format nil "Failed: ~a" command))))))
+   (length file-candidates)))
+
   
 
 @export

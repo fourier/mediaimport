@@ -105,11 +105,12 @@
 ;;   :message-callback 'on-message
    :destroy-callback 'on-destroy))
 
+
 (defmethod on-destroy ((self cocoa-application-interface))
   (with-slots (main-window) self
     (when main-window
-      ;; Set main-window to nil to prevent recursion back from
-      ;; drawing-interface's destroy-callback.
+      ;; Set application-interface to nil to prevent recursion back from
+      ;; main-window's destroy-callback.
       (setf (slot-value main-window 'application-interface) nil)
       ;; Destroy the single  window.  When run as a delivered
       ;; application, this will cause the application to exit because it
@@ -219,6 +220,7 @@
   ((color :accessor file-candidate-color :initarg :color :initform :black)
    (status :accessor file-candidate-status :initform nil)))
 
+
 (defmethod update-candidate-status ((self file-candidate-item))
   (with-slots (color comment status) self
     (cond ((eql status 'exists)
@@ -238,6 +240,7 @@
           (t
            (setf color :black
                  comment "")))))
+
 
 (defun update-candidate (cand duplicates redisplay-function)
   (let ((old-status (file-candidate-status cand))
@@ -323,7 +326,6 @@
                  (mp:process-run-function "Collect files" nil #'collect-files-thread-fun self r))))))))
                  
                         
-                        
 (defmethod collect-files-thread-fun ((self main-window) renamer)
   (with-slots (progress-bar proposal-table copy-button) self
     (let ((size 1))
@@ -360,10 +362,12 @@
           (if target target "(skip)")
           (file-candidate-comment cand))))
 
+
 (defun color-file-candidate (lp candidate state)
   (declare (ignore lp))
   (when (eq state :normal)
     (file-candidate-color candidate)))
+
 
 (defun edit-candidate-callback (item self)
   (with-slots (proposal-table) self
@@ -383,7 +387,7 @@
 
 (defun on-copy-button (data self)
   (declare (ignore data))
-  (with-slots (proposal-table) self
+  (with-slots (proposal-table command-checkbox) self
     ;; ask for confirmation
     (when (confirm-yes-or-no
            "Are you sure want to start copying?")
@@ -399,10 +403,13 @@
                         "Some existing files will be overwriten. Proceed anyway?")))
           (toggle-progress self t :end (length items))
           ;; start worker thread
-          (mp:process-run-function "Copy files" nil #'copy-files-thread-fun self items))))))
+          (mp:process-run-function "Copy files" nil #'copy-files-thread-fun self items (button-selected command-checkbox)))))))
 
-(defmethod copy-files-thread-fun ((self main-window) items)
-  "Worker function to copy files. ITEMS is an array of FILE-CANDIDATE-ITEMs."
+
+(defmethod copy-files-thread-fun ((self main-window) items external-command)
+  "Worker function to copy/apply command to files.
+ITEMS is an array of FILE-CANDIDATE-ITEMs. EXTERNAL-COMMAND is a boolean flag;
+if T execute command from command-edit, otherwise just copy files"
   (flet ((copy-files-callback (i &optional error-text)
            ;; a callback provided to copy-files function from mediaimport package.
            ;; it updates the progress bar and updates the file status/color
@@ -421,9 +428,16 @@
                                                 error-text))
                                         (redisplay-collection-item proposal-table item)))))))           
     ;; copy files with our callback
-    (copy-files items :callback #'copy-files-callback)
+    (if external-command
+        (apply-command-to-files items
+                                (text-input-pane-text
+                                 (slot-value self 'command-edit))
+                                :callback #'copy-files-callback
+                                :stream (collector-pane-stream (slot-value self 'output-edit)))
+        (copy-files items :callback #'copy-files-callback))
     ;; and finally update progress, hide it and enable all buttons
     (toggle-progress self nil :end (length items))))
+
 
 (defmethod toggle-progress ((self main-window) enable &key (start 0) end)
   (apply-in-pane-process self
@@ -441,9 +455,6 @@
                                        (switchable-layout-visible-child progress-layout) nil))
                              ;; enable/disable buttons
                              (enable-interface self :enable (not enable))))))
-
-                             
-                             
   
 
 (defmethod enable-interface ((self main-window) &key (enable t))
@@ -492,12 +503,20 @@ Possible templates:
 (defmethod on-save-script-button (data (self main-window))
   "Callback called on Save script button"
   (declare (ignore data))
-  (with-slots (output-edit) self
-    (system:call-system-showing-output "ls" :current-directory "~/Sources/lisp" :output-stream (collector-pane-stream output-edit))))
+  (with-slots (proposal-table) self
+    (let ((items (collection-items proposal-table))
+          (filename (prompt-for-file "Choose script name to save" :operation :save :filter "*.sh")))
+      (when filename
+        (with-open-file (stream filename :direction :output :if-exists :supersede)
+          (apply-command-to-files items
+                                  (text-input-pane-text
+                                   (slot-value self 'command-edit))
+                                  :stream stream
+                                  :script t))))))
 
-
+  
 (defmethod on-destroy ((self main-window))
-  ""
+  "Callback called when closing the main window"
   (with-slots (application-interface) self
     (when application-interface
       ;; Set main-window to nil to prevent recursion back from
@@ -514,11 +533,14 @@ Possible templates:
     (format t "on-command-checkbox: ~a" (button-selected command-checkbox))
     (toggle-custom-command self (button-selected command-checkbox))))
 
+
 (defmethod toggle-custom-command ((self main-window) enable)
   "Toggle appropriate UI elements when command checkbox is triggered"
   (with-slots (save-script-button command-edit) self
     (setf (button-enabled save-script-button) enable
           (text-input-pane-enabled command-edit) enable)))
+
+
 @export
 (defun main ()
   (init)
