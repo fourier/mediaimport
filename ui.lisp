@@ -124,6 +124,16 @@
   ;; slots
   ((application-interface :initarg :application-interface)
    (duplicates :initform nil))
+  (:menus
+   ;; pop-up menu in the list of candidates
+   (candidates-menu
+    "Candidates"
+    (("Copy to clipboard"
+      :callback 'on-candidates-menu-copy
+      :callback-type :interface)
+     ("Delete from the list"
+      :callback 'on-candidates-menu-delete
+      :callback-type :interface))))
 
   ;; ui elements
   (:panes
@@ -157,6 +167,8 @@
                    :column-function 'file-candidate-to-row
                    :color-function 'color-file-candidate
                    :action-callback 'edit-candidate-callback
+                   :pane-menu candidates-menu
+                   :interaction :multiple-selection
                    :columns '((:title "From" 
                                :adjust :left 
                                :visible-min-width (:character 45))
@@ -540,6 +552,21 @@ Possible templates:
     (setf (button-enabled save-script-button) enable
           (text-input-pane-enabled command-edit) enable)))
 
+
+(defmethod on-candidates-menu-copy ((self main-window))
+  (with-slots (proposal-table) self
+    (when-let ((selected (choice-selected-items proposal-table)))
+      (set-clipboard self
+                     (format nil "~{~A~^~%~}"
+                             (mapcar #'file-candidate-source selected))))))
+
+
+(defmethod on-candidates-menu-delete ((self main-window))
+  (with-slots (proposal-table) self
+    (when-let ((selected (choice-selected-items proposal-table)))
+      (when (confirm-yes-or-no "Remove these files from the list?~%~{~A~^~%~}"
+                               (mapcar #'file-candidate-source selected))
+        (remove-items proposal-table selected)))))
 
 @export
 (defun main ()
