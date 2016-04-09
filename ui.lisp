@@ -247,6 +247,9 @@
           ((eql status 'copied)
            (setf color :blue
                  comment "Copied"))
+          ((eql status 'processed)
+           (setf color :blue
+                 comment "Processed"))
           ((eql status 'skip)
            (setf color :grey))
           (t
@@ -400,22 +403,27 @@
 (defun on-copy-button (data self)
   (declare (ignore data))
   (with-slots (proposal-table command-checkbox) self
-    ;; ask for confirmation
-    (when (confirm-yes-or-no
-           "Are you sure want to start copying?")
-      (let* ((items (collection-items proposal-table))
-             (some-dups (find-if (lambda (x) (eql (file-candidate-status x) 'duplicate)) items))
-             (some-exists (find-if (lambda (x) (eql (file-candidate-status x) 'exists)) items)))
-        ;; some sanity confirmations        
-        (when (and (or (not some-dups)
-                       (confirm-yes-or-no
-                        "Where are duplicates in targets. Proceed anyway?"))
-                   (or (not some-exists)
-                       (confirm-yes-or-no
-                        "Some existing files will be overwriten. Proceed anyway?")))
-          (toggle-progress self t :end (length items))
-          ;; start worker thread
-          (mp:process-run-function "Copy files" nil #'copy-files-thread-fun self items (button-selected command-checkbox)))))))
+    (let ((do-copy (button-selected command-checkbox)))
+      ;; ask for confirmation
+      (when (confirm-yes-or-no
+             "Are you sure want to start copying?")
+        (let* ((items (collection-items proposal-table))
+               (some-dups (find-if (lambda (x) (eql (file-candidate-status x) 'duplicate)) items))
+               (some-exists (find-if (lambda (x) (eql (file-candidate-status x) 'exists)) items)))
+          ;; some sanity confirmations        
+          (when (and (or (not some-dups)
+                         (confirm-yes-or-no
+                          "Where are duplicates in targets. Proceed anyway?"))
+                     (or (not some-exists)
+                         (confirm-yes-or-no
+                          "Some existing files will be overwriten. Proceed anyway?")))
+            (toggle-progress self t :end (length items))
+            ;; start worker thread
+            (mp:process-run-function "Copy files"
+                                     nil
+                                     #'copy-files-thread-fun
+                                     self
+                                     items do-copy)))))))
 
 
 (defmethod copy-files-thread-fun ((self main-window) items external-command)
@@ -433,7 +441,9 @@ if T execute command from command-edit, otherwise just copy files"
                                         (setf (range-slug-start progress-bar) (1+ i))
                                         (unless (eql (file-candidate-status item) 'skip)
                                           (setf (file-candidate-status item)
-                                                (if error-text 'error 'copied)))
+                                                (cond (error-text 'error)
+                                                      (external-command 'processed)
+                                                      (t 'copied))))
                                         (update-candidate-status item)
                                         (when error-text
                                           (setf (file-candidate-comment item)
@@ -548,9 +558,10 @@ Possible templates:
 
 (defmethod toggle-custom-command ((self main-window) enable)
   "Toggle appropriate UI elements when command checkbox is triggered"
-  (with-slots (save-script-button command-edit) self
+  (with-slots (save-script-button command-edit copy-button) self
     (setf (button-enabled save-script-button) enable
-          (text-input-pane-enabled command-edit) enable)))
+          (text-input-pane-enabled command-edit) enable
+          (item-text copy-button) (if enable "Process..." "Copy..."))))
 
 
 (defmethod on-candidates-menu-copy ((self main-window))

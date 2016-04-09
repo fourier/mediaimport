@@ -482,6 +482,16 @@ Example:
 
 
 @export
+(defun validate-command-string (pattern)
+  "Validate the PATTERN for command to be applied to file candidates.
+Will return VALUES (result, error-text), where RESULT is t if the
+{SOURCE} template pattern is found, and (nil, errortext) otherwise"
+  (let ((matches (mappings-in-format-string pattern +command-format-mapping+)))
+    (if (not (member "{SOURCE}" matches :test #'string=))
+        (values nil "{SOURCE} template argument is not provided")
+        t)))
+
+@export
 (defun apply-command-to-files (file-candidates command-pattern
                                                &key callback stream script)
   "Applies the command-patten to all candidates from the array FILE-CANDIDATES

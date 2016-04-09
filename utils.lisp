@@ -176,3 +176,11 @@ the value received from OBJECT by calling a getter."
         (push (funcall (cdr found) object) result-list)))
     (apply (curry #'format nil new-format-string) (nreverse result-list))))
   
+
+@export
+(defun mappings-in-format-string (pattern mappings)
+  (let* ((regex
+          (format nil "(~{~A~^|~})"
+                  (hash-table-keys mappings)))
+         (matches (ppcre:all-matches-as-strings regex pattern)))
+    matches))
