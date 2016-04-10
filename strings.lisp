@@ -55,6 +55,41 @@
   (save-script . "Save as script")
   (collect-data . "Collect data")
   (copy-button . "Copy...")
+  (process-button . "Process...")
   (files-pane . "Files")
   (output-pane . "Output")
+  (status-alreay-exists . "File already exist")
+  (status-duplicate . "Duplicate name")
+  (status-error . "Error")
+  (status-copied . "Copied")
+  (status-processed . "Processed")
+  (about-text . "Media Import utility~%Copyright (c) 2016 Alexey Veretennikov")
+  (browse-input-dir-title . "Import from")
+  (browse-export-dir-title . "Export to")
+  (dir-not-exists-fmt . "Directory ~s doesn't exist")
+  (rename-dlg-fmt . "Rename ~a")
+  (start-copy-confirmation . "Are you sure want to start copying?")
+  (duplicates-exist-confirmation . "Where are duplicates in targets. Proceed anyway?")
+  (overwrite-confirmation . "Some existing files will be overwriten. Proceed anyway?")
+  (patten-tooltip . "The output file pattern.
+Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\".
+If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions.
+Possible templates:
+{YYYY}  - year, like 1999
+{MM}    - month, like 01
+{DD}    - day, like 31
+{MONTH} - month name, like January
+{MON}   - 3 letters month abbreviation, like Nov
+{МЕСЯЦ} - russian month name
+{МЕС}   - russian month abbreviation
+{hh}    - hour, in 24-hours format
+{mm}    - minute
+{ss}    - second")
+  (command-tooltip . "The custom command pattern.
+Example: \"convert -resize 1024x768 {SOURCE} {TARGET}
+Possible templates:
+{SOURCE} full path to the source file
+{TARGET} full path to the target file")
+  (prompt-save-script . "Choose script name to save")
+  (remove-files-fmt . "Remove these files from the list?~%~{~A~^~%~}")
   )

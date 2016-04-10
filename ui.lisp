@@ -238,19 +238,19 @@
   (with-slots (color comment status) self
     (cond ((eql status 'exists)
            (setf color :red
-                 comment "File already exist"))
+                 comment string.status-alreay-exists))
           ((eql status 'duplicate)
            (setf color :red
-                 comment "Duplicate name"))
+                 comment string.status-duplicate))
           ((eql status 'error)
            (setf color :red1
-                 comment "Error"))
+                 comment string.status-error))
           ((eql status 'copied)
            (setf color :blue
-                 comment "Copied"))
+                 comment string.status-copied))
           ((eql status 'processed)
            (setf color :blue
-                 comment "Processed"))
+                 comment string.status-processed))
           ((eql status 'skip)
            (setf color :grey))
           (t
@@ -291,8 +291,7 @@
 
 (defun on-about-window ()
   (capi:display-message-on-screen (capi:convert-to-screen nil)
-                                  "Media Import utility~%~a"
-                                  "Copyright (c) 2016 Alexey Veretennikov"))
+                                  string.about-text))
 
 
 (defun on-browse-button (data self)
@@ -301,10 +300,10 @@
           (message nil))
       (cond ((eql data 'input)
              (setf field input-directory-edit
-                   message "Import from"))
+                   message string.browse-input-dir-title))
             ((eql data 'output)
              (setf field output-directory-edit
-                   message "Export to")))
+                   message string.browse-export-dir-title)))
       (multiple-value-bind (dir result) (prompt-for-directory message)
         (when result
           (setf (capi:text-input-pane-text field) (namestring dir)))))))
@@ -323,9 +322,9 @@
           (dest-path (text-input-pane-text output-directory-edit)))
       (when (and (> (length source-path) 0) (> (length dest-path) 0))
         (cond ((not (directory-exists-p source-path))
-               (display-message "Directory ~s doesn't exist" source-path))
+               (display-message string.dir-not-exists-fmt source-path))
               ((not (directory-exists-p dest-path))
-               (display-message "Directory ~s doesn't exist" dest-path))
+               (display-message string.dir-not-exists-fmt dest-path))
               ;; do processing only when directories are not the same
               ((not (equalp (truename source-path) (truename dest-path)))
                (let* ((masks (text-input-pane-text input-filemasks-edit))
@@ -375,7 +374,7 @@
 (defun file-candidate-to-row (cand)
   (let ((target (file-candidate-target cand)))
     (list (file-candidate-source cand)
-          (if target target "(skip)")
+          (if target target string.skip)
           (file-candidate-comment cand))))
 
 
@@ -390,7 +389,7 @@
     ;; make sense only for those with target
     (when (file-candidate-target item)
       (let ((message 
-             (format nil "Rename ~a" (namestring (file-candidate-source item)))))
+             (format nil string.rename-dlg-fmt (namestring (file-candidate-source item)))))
         (multiple-value-bind (fname result) 
             (prompt-for-string message :text (namestring (file-candidate-target item)))
           (when (and result
@@ -407,17 +406,17 @@
     (let ((do-copy (button-selected command-checkbox)))
       ;; ask for confirmation
       (when (confirm-yes-or-no
-             "Are you sure want to start copying?")
+             string.start-copy-confirmation)
         (let* ((items (collection-items proposal-table))
                (some-dups (find-if (lambda (x) (eql (file-candidate-status x) 'duplicate)) items))
                (some-exists (find-if (lambda (x) (eql (file-candidate-status x) 'exists)) items)))
           ;; some sanity confirmations        
           (when (and (or (not some-dups)
                          (confirm-yes-or-no
-                          "Where are duplicates in targets. Proceed anyway?"))
+                          string.duplicates-exist-confirmation))
                      (or (not some-exists)
                          (confirm-yes-or-no
-                          "Some existing files will be overwriten. Proceed anyway?")))
+                          string.overwrite-confirmation)))
             (toggle-progress self t :end (length items))
             ;; start worker thread
             (mp:process-run-function "Copy files"
@@ -500,27 +499,8 @@ background operations happened"
 (defmethod on-main-window-tooltip ((self main-window) pane type key)
   (when (eq type :tooltip) ;; the only possible type on Cocoa
     (ecase key
-      (pattern-edit
-       "The output file pattern.
-Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\".
-If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions.
-Possible templates:
-{YYYY}  - year, like 1999
-{MM}    - month, like 01
-{DD}    - day, like 31
-{MONTH} - month name, like January
-{MON}   - 3 letters month abbreviation, like Nov
-{МЕСЯЦ} - russian month name
-{МЕС}   - russian month abbreviation
-{hh}    - hour, in 24-hours format
-{mm}    - minute
-{ss}    - second")
-      (command-edit
-       "The custom command pattern.
-Example: \"convert -resize 1024x768 {SOURCE} {TARGET}
-Possible templates:
-{SOURCE} full path to the source file
-{TARGET} full path to the target file"))))
+      (pattern-edit string.patten-tooltip)
+      (command-edit string.command-tooltip))))
 
 
 (defmethod on-save-script-button (data (self main-window))
@@ -528,7 +508,7 @@ Possible templates:
   (declare (ignore data))
   (with-slots (proposal-table) self
     (let ((items (collection-items proposal-table))
-          (filename (prompt-for-file "Choose script name to save" :operation :save :filter "*.sh")))
+          (filename (prompt-for-file string.prompt-save-script :operation :save :filter "*.sh")))
       (when filename
         (with-open-file (stream filename :direction :output :if-exists :supersede)
           (apply-command-to-files items
@@ -553,7 +533,6 @@ Possible templates:
   "Callback called when toggled command checkbox"
   (declare (ignore data))
   (with-slots (command-checkbox) self
-    (format t "on-command-checkbox: ~a" (button-selected command-checkbox))
     (toggle-custom-command self (button-selected command-checkbox))))
 
 
@@ -562,7 +541,7 @@ Possible templates:
   (with-slots (save-script-button command-edit copy-button) self
     (setf (button-enabled save-script-button) enable
           (text-input-pane-enabled command-edit) enable
-          (item-text copy-button) (if enable "Process..." "Copy..."))))
+          (item-text copy-button) (if enable string.process-button string.copy-button))))
 
 
 (defmethod on-candidates-menu-copy ((self main-window))
@@ -576,7 +555,7 @@ Possible templates:
 (defmethod on-candidates-menu-delete ((self main-window))
   (with-slots (proposal-table) self
     (when-let ((selected (choice-selected-items proposal-table)))
-      (when (confirm-yes-or-no "Remove these files from the list?~%~{~A~^~%~}"
+      (when (confirm-yes-or-no string.remove-files-fmt
                                (mapcar #'file-candidate-source selected))
         (remove-items proposal-table selected)))))
 
@@ -585,7 +564,7 @@ Possible templates:
   (with-slots (proposal-table) self
     (when-let ((selected (choice-selected-items proposal-table)))
       ;; [[NSWorkspace sharedWorkspace] openFile:path];
-      (display-message "Open"))))
+      (display-message string.open))))
 
 
 @export
