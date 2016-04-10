@@ -1,9 +1,11 @@
-;;;; mediaimport.lisp
+;;;; ui.lisp
 ;; 
 ;; To run, execute (mediaimport.ui:main)
 ;;
 (defpackage #:mediaimport.ui
-  (:use #:cl #:capi #:mediaimport.utils #:mediaimport.renamer #:alexandria)
+  (:documentation "User interface definitions for MediaImport application")
+  (:use #:cl #:capi #:alexandria
+        #:mediaimport.utils #:mediaimport.renamer #:mediaimport.strings)
   ;; these names should be from alexandria rather than lispworks
   (:shadowing-import-from #:alexandria if-let removef when-let* appendf copy-file with-unique-names nconcf when-let)
   (:add-use-defaults t))
@@ -11,24 +13,20 @@
 (in-package #:mediaimport.ui)
 (annot:enable-annot-syntax)
 
-;;(shadowing-import :alexandria 'compose)
 
-(defvar *main-window* nil
-  "Main window instance")
-  
-(defvar +proposal-table-sorting-types+
+(defconstant +proposal-table-sorting-types+
   (list
-   (capi:make-sorting-description :type "From"
+   (capi:make-sorting-description :type string.from-column
                                   :key (compose #'namestring #'file-candidate-source)
                                   :sort 'string-lessp
                                   :reverse-sort 'string-greaterp)
-   (capi:make-sorting-description :type "To"
+   (capi:make-sorting-description :type string.to-column
                                   ;; in order to do sorting we need to remember
                                   ;; what target could be nil
-                                  :key (lambda (x) (namestring (or (file-candidate-target x) "(skip)")))
+                                  :key (lambda (x) (namestring (or (file-candidate-target x) string.skip)))
                                   :sort 'string-lessp
                                   :reverse-sort 'string-greaterp)
-   (capi:make-sorting-description :type "Comments"
+   (capi:make-sorting-description :type string.comments-column
                                   :key 'file-candidate-comment
                                   :sort 'string-lessp
                                   :reverse-sort 'string-greaterp)))
@@ -42,9 +40,9 @@
                 :accessor main-window))
   (:menus
    (application-menu
-    "Media Import"
+    string.application-name
     ((:component
-      (("About Media Import"
+      ((string.about-menu
         :callback 'on-about-window
         :callback-type :none)))
 #|   ;; no preferences for now
@@ -59,48 +57,48 @@
       ;; attach the standard Services menu.
       :name :application-services)
      (:component
-      (("Hide Media Import"
+      ((string.hide-media-import
         :accelerator "accelerator-h"
         :callback-data :hidden)
-       ("Hide Others"
+       (string.hide-others
         :accelerator "accelerator-meta-h"
         :callback-data :others-hidden)
-       ("Show All"
+       (string.show-all
         :callback-data :all-normal))
       :callback #'(setf top-level-interface-display-state)
       :callback-type :data-interface)
      (:component
-      (("Quit Media Import"
+      ((string.quit
         :accelerator "accelerator-q"
         :callback 'destroy
         :callback-type :interface)))))
    (edit-menu
-    "Edit"
+    string.edit
     ((:component
-      (("Undo"
+      ((string.undo
         :enabled-function 'active-pane-undo-p
         :callback 'active-pane-undo
         :callback-type :none)))
      (:component     
-      (("Cut"
+      ((string.cut
         :enabled-function 'active-pane-cut-p
         :callback 'active-pane-cut
         :callback-type :none)
-       ("Copy"
+       (string.copy
         :enabled-function 'active-pane-copy-p
         :callback 'active-pane-copy
         :callback-type :none)
-       ("Paste" 
+       (string.paste
         :enabled-function 'active-pane-paste-p
         :callback 'active-pane-paste
         :callback-type :none)
-       ("Select All"
+       (string.select-all
         :enabled-function 'active-pane-select-all-p
         :callback 'active-pane-select-all
         :callback-type :none))))))
   (:menu-bar application-menu edit-menu)
   (:default-initargs
-   :title "Media Import"
+   :title string.application-name
    :application-menu 'application-menu
 ;;   :message-callback 'on-message
    :destroy-callback 'on-destroy))
@@ -127,37 +125,40 @@
   (:menus
    ;; pop-up menu in the list of candidates
    (candidates-menu
-    "Candidates"
-    (("Copy to clipboard"
+    string.candidates
+    ((string.open
+      :callback 'on-candidates-menu-open
+      :callback-type :interface)
+     (string.copy-to-clipboard
       :callback 'on-candidates-menu-copy
       :callback-type :interface)
-     ("Delete from the list"
+     (string.delete-from-list
       :callback 'on-candidates-menu-delete
       :callback-type :interface))))
 
   ;; ui elements
   (:panes
    (input-directory-edit text-input-pane :callback #'on-collect-button)
-   (input-button push-button :text "Choose Input directory..." :callback #'on-browse-button :data 'input )
+   (input-button push-button :text string.choose-input :callback #'on-browse-button :data 'input )
    (output-directory-edit text-input-pane :callback #'on-collect-button)
-   (output-button push-button :text "Choose Output directory..." :callback #'on-browse-button :data 'output)
-   (recursive-checkbox check-button :text "Search in subdirectories")
-   (exif-checkbox check-button :text "Use EXIF for JPG")
-   (input-filemasks-edit text-input-pane :title "Comma-separated list of file masks, like \"*.jpg,*.png\""
+   (output-button push-button :text string.choose-output :callback #'on-browse-button :data 'output)
+   (recursive-checkbox check-button :text string.search-in-subdirs)
+   (exif-checkbox check-button :text string.use-exif)
+   (input-filemasks-edit text-input-pane :title string.filemasks-label
                     :text "*.jpg"
                     :visible-min-width '(:character 32)
                     :callback #'on-collect-button)
-   (pattern-edit text-input-pane :title "Output pattern"
+   (pattern-edit text-input-pane :title string.output-pattern
             :visible-min-width '(:character 32)
-            :text "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg"
+            :text string.default-output-pattern
             :callback #'on-collect-button)
-   (command-checkbox check-button :text "Use custom command"
+   (command-checkbox check-button :text string.use-custom-command
                      :callback #'on-command-checkbox
                      :retract-callback #'on-command-checkbox)
    (command-edit text-input-pane :visible-min-width '(:character 40)
                  :callback #'on-collect-button)
-   (save-script-button push-button :text "Save as script" :callback #'on-save-script-button)
-   (collect-button push-button :text "Collect data" :callback #'on-collect-button)
+   (save-script-button push-button :text string.save-script :callback #'on-save-script-button)
+   (collect-button push-button :text string.collect-data :callback #'on-collect-button)
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
                    :visible-min-height '(:character 10)
@@ -169,17 +170,17 @@
                    :action-callback 'edit-candidate-callback
                    :pane-menu candidates-menu
                    :interaction :multiple-selection
-                   :columns '((:title "From" 
+                   :columns `((:title ,string.from-column 
                                :adjust :left 
                                :visible-min-width (:character 45))
-                              (:title "To" 
+                              (:title ,string.to-column
                                :adjust :left 
                                :visible-min-width (:character 45))
-                              (:title "Comments" 
+                              (:title ,string.comments-column
                                :adjust :left 
                                :visible-min-width (:character 45))))
    (output-edit collector-pane :buffer-name "Output buffer")
-   (copy-button push-button :text "Copy..." :callback #'on-copy-button)
+   (copy-button push-button :text string.copy-button :callback #'on-copy-button)
    (progress-bar progress-bar))
   ;; Layout
   (:layouts
@@ -199,8 +200,8 @@
    (proposal-and-output-layout tab-layout '(proposal-table output-edit)
                                :print-function 'car
                                :visible-child-function 'second
-                               :items '(("Files" proposal-table)
-                                        ("Output" output-edit)))
+                               :items `((,string.files-pane proposal-table)
+                                       (,string.output-pane output-edit)))
    (progress-layout switchable-layout '(nil progress-bar))
     
    (main-layout column-layout '(input-output-layout
@@ -215,7 +216,7 @@
                 :y-ratios '(nil nil nil nil 1 nil nil)))
   ;; all other properties
   (:default-initargs
-   :title "Media Import"
+   :title string.application-name
    :visible-min-width 800
    :layout 'main-layout
    :initial-focus 'input-directory-edit
@@ -579,12 +580,20 @@ Possible templates:
                                (mapcar #'file-candidate-source selected))
         (remove-items proposal-table selected)))))
 
+
+(defmethod on-candidates-menu-open ((self main-window))
+  (with-slots (proposal-table) self
+    (when-let ((selected (choice-selected-items proposal-table)))
+      ;; [[NSWorkspace sharedWorkspace] openFile:path];
+      (display-message "Open"))))
+
+
 @export
 (defun main ()
   (init)
   (let ((application (make-instance 'cocoa-application-interface)))
     (set-application-interface application)
-    (setf *main-window* (make-instance 'main-window
-                                       :application-interface application))
-    (setf (main-window application) *main-window*)
-    (display *main-window*)))
+    (let ((main-window (make-instance 'main-window
+                                      :application-interface application)))
+      (setf (main-window application) main-window)
+      (display main-window))))

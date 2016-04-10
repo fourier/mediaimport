@@ -12,6 +12,7 @@
                #:zpb-exif)
   :serial t
   :components ((:file "utils")
+               (:file "strings")
                (:file "datetime")
                (:file "renamer")
                (:file "ui")))

@@ -1,12 +1,13 @@
-;;;; mediaimport.lisp
+;;;; renamer.lisp
+
 (defpackage #:mediaimport.renamer
+  (:documentation "Application logic related to searching and renaming")
   (:use #:cl #:cl-annot.class #:alexandria
-   #:mediaimport.utils #:mediaimport.datetime))
+   #:mediaimport.utils #:mediaimport.datetime #:mediaimport.strings))
 
 (in-package #:mediaimport.renamer)
 (annot:enable-annot-syntax)
 
-;;; "mediaimport" goes here. Hacks and glory await!
 
 (defconstant +timestamp-format-mapping+
   (make-hash-table :test #'string=)
@@ -91,6 +92,7 @@ of candidates for copy/process"))
 
 
 (defmethod initialize-instance :after ((self renamer) &key)
+  "Constructor for RENAMER class"
   (with-slots (source-path destination-path filemasks) self
     ;; process paths
     (setf source-path (truename source-path))
@@ -348,7 +350,7 @@ file names."
                 ;; found, clean the target and set appropriate comment
                 (setf (file-candidate-target cand) nil
                       (file-candidate-comment cand)
-                      (concatenate 'string "Same as: " found))
+                      (concatenate 'string string.same-as- found))
               ;; all existing are not the same as our target. Bump it then!
               (setf (file-candidate-target cand)
                     (bump-file-name target (1+ (get-maximum-file-version similar))))))))
@@ -488,7 +490,7 @@ Will return VALUES (result, error-text), where RESULT is t if the
 {SOURCE} template pattern is found, and (nil, errortext) otherwise"
   (let ((matches (mappings-in-format-string pattern +command-format-mapping+)))
     (if (not (member "{SOURCE}" matches :test #'string=))
-        (values nil "{SOURCE} template argument is not provided")
+        (values nil string.source-not-provided)
         t)))
 
 @export
@@ -518,7 +520,7 @@ STREAM is a stream to redirect output to"
                           (format stream "~a~%" command))))
        (when callback
          (funcall callback i (when (/= 0 result)
-                               (format nil "Failed: ~a" command))))))
+                               (format nil string.failed-fmt command))))))
    (length file-candidates)))
 
   

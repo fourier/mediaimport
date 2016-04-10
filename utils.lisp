@@ -1,5 +1,6 @@
-;;;; mediaimport.lisp
+;;;; utils.lisp
 (defpackage #:mediaimport.utils
+  (:documentation "Utility functions used in all packages")
   (:use #:cl #:cl-annot.class #:alexandria))
 
 (in-package #:mediaimport.utils)
@@ -179,8 +180,43 @@ the value received from OBJECT by calling a getter."
 
 @export
 (defun mappings-in-format-string (pattern mappings)
+  "Returns a list of mappings from MAPPINGS hash table found in string PATTERN"
   (let* ((regex
           (format nil "(~{~A~^|~})"
                   (hash-table-keys mappings)))
          (matches (ppcre:all-matches-as-strings regex pattern)))
     matches))
+
+@export
+(defmacro define-resource (name &body string-list)
+  "Helper to declare and export constant with a given prefix.
+NAME is a prefix,
+STRING-LIST is a list of conses: constant name and constant value.
+Example:
+(define-resource string
+  (to . \"To: \") 
+  (from . \"From: \")
+  (message . \"hello\"))
+
+will generate the following code:
+(EVAL-WHEN (:COMPILE-TOPLEVEL :LOAD-TOPLEVEL :EXECUTE)
+  (PROGN (EXPORT 'STRING.TO) (DEFCONSTANT STRING.TO \"To: \"))
+  (PROGN (EXPORT 'STRING.FROM) (DEFCONSTANT STRING.FROM \"From: \"))
+  (PROGN (EXPORT 'STRING.MESSAGE) (DEFCONSTANT STRING.MESSAGE \"hello\")))
+
+and the constants will be accessible like string.to etc.
+"
+  (declare (ignore lambda-list))
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     ,@(mapcar (lambda (string-item)
+                 (let ((res-name
+                        (intern
+                         (concatenate 'string
+                                      (symbol-name name)
+                                      "."
+                                      (symbol-name (car string-item))))))
+                   `(progn
+                      (export ',(or res-name '(nil)))
+                      (defconstant ,res-name ,(cdr string-item)))))
+               string-list)))
+
