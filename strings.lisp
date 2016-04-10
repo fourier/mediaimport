@@ -49,6 +49,7 @@
   (search-in-subdirs . "Search in subdirectories")
   (use-exif . "Use EXIF for JPG")
   (filemasks-label . "Comma-separated list of file masks, like \"*.jpg,*.png\"")
+  (default-filemasks . "*.jpg")
   (output-pattern . "Output pattern")
   (default-output-pattern . "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg")
   (use-custom-command . "Use custom command")

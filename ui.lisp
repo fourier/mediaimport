@@ -145,9 +145,9 @@
    (recursive-checkbox check-button :text string.search-in-subdirs)
    (exif-checkbox check-button :text string.use-exif)
    (input-filemasks-edit text-input-pane :title string.filemasks-label
-                    :text "*.jpg"
-                    :visible-min-width '(:character 32)
-                    :callback #'on-collect-button)
+                         :text string.default-filemasks
+                         :visible-min-width '(:character 32)
+                         :callback #'on-collect-button)
    (pattern-edit text-input-pane :title string.output-pattern
             :visible-min-width '(:character 32)
             :text string.default-output-pattern
@@ -451,11 +451,19 @@ if T execute command from command-edit, otherwise just copy files"
                                         (redisplay-collection-item proposal-table item)))))))           
     ;; copy files with our callback
     (if external-command
-        (apply-command-to-files items
-                                (text-input-pane-text
-                                 (slot-value self 'command-edit))
-                                :callback #'copy-files-callback
-                                :stream (collector-pane-stream (slot-value self 'output-edit)))
+        ;; command text
+        (let ((cmd (text-input-pane-text (slot-value self 'command-edit))))
+          ;; validate
+          (multiple-value-bind (result text)
+              (validate-command-string cmd)
+            (if (not result)
+                ;; error message
+                (display-message text)
+                ;; otherwise process
+                (apply-command-to-files items
+                                      cmd
+                                      :callback #'copy-files-callback
+                                      :stream (collector-pane-stream (slot-value self 'output-edit))))))
         (copy-files items :callback #'copy-files-callback))
     ;; and finally update progress, hide it and enable all buttons
     (toggle-progress self nil :end (length items))))
