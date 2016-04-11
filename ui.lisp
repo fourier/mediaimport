@@ -138,27 +138,32 @@
 
   ;; ui elements
   (:panes
-   (input-directory-edit text-input-pane :callback #'on-collect-button)
-   (input-button push-button :text string.choose-input :callback #'on-browse-button :data 'input )
-   (output-directory-edit text-input-pane :callback #'on-collect-button)
-   (output-button push-button :text string.choose-output :callback #'on-browse-button :data 'output)
+   (input-directory-edit text-input-pane :callback 'on-collect-button
+                         :title string.choose-input
+                         :buttons 
+                         '(:browse-file (:directory t :image :std-file-open) :ok nil))
+   (output-directory-edit text-input-pane :callback 'on-collect-button
+                          :title string.choose-output
+                         :buttons 
+                         '(:browse-file (:directory t :image :std-file-open) :ok nil))
    (recursive-checkbox check-button :text string.search-in-subdirs)
    (exif-checkbox check-button :text string.use-exif)
    (input-filemasks-edit text-input-pane :title string.filemasks-label
                          :text string.default-filemasks
                          :visible-min-width '(:character 32)
-                         :callback #'on-collect-button)
+                         :callback 'on-collect-button)
    (pattern-edit text-input-pane :title string.output-pattern
             :visible-min-width '(:character 32)
             :text string.default-output-pattern
-            :callback #'on-collect-button)
+            :callback 'on-collect-button)
    (command-checkbox check-button :text string.use-custom-command
-                     :callback #'on-command-checkbox
-                     :retract-callback #'on-command-checkbox)
+                     :callback 'on-command-checkbox
+                     :retract-callback 'on-command-checkbox)
    (command-edit text-input-pane :visible-min-width '(:character 40)
-                 :callback #'on-collect-button)
-   (save-script-button push-button :text string.save-script :callback #'on-save-script-button)
-   (collect-button push-button :text string.collect-data :callback #'on-collect-button)
+                 :callback 'on-collect-button
+                 :text-change-callback 'on-command-edit-changed)
+   (save-script-button push-button :text string.save-script :callback 'on-save-script-button)
+   (collect-button push-button :text string.collect-data :callback 'on-collect-button)
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
                    :visible-min-height '(:character 10)
@@ -167,7 +172,7 @@
                    :sort-descriptions +proposal-table-sorting-types+
                    :column-function 'file-candidate-to-row
                    :color-function 'color-file-candidate
-                   :action-callback 'edit-candidate-callback
+                   :action-callback 'on-candidate-dblclick
                    :pane-menu candidates-menu
                    :interaction :multiple-selection
                    :columns `((:title ,string.from-column 
@@ -180,15 +185,13 @@
                                :adjust :left 
                                :visible-min-width (:character 45))))
    (output-edit collector-pane :buffer-name "Output buffer")
-   (copy-button push-button :text string.copy-button :callback #'on-copy-button)
+   (copy-button push-button :text string.copy-button :callback 'on-copy-button)
    (progress-bar progress-bar))
   ;; Layout
   (:layouts
-   (input-output-layout grid-layout '(input-button input-directory-edit
-                                                   output-button output-directory-edit)
-                        :columns 2 :rows 2
-                        :x-adjust '(:right :left)
-                        :y-adjust '(:center :center))
+   (input-output-layout column-layout '(input-directory-edit output-directory-edit))
+
+
    (options-layout grid-layout '(input-filemasks-edit recursive-checkbox 
                                                       pattern-edit exif-checkbox)
                       :columns 2 :rows 2
@@ -220,8 +223,8 @@
    :visible-min-width 800
    :layout 'main-layout
    :initial-focus 'input-directory-edit
-   :help-callback #'on-main-window-tooltip
-   :destroy-callback #'on-destroy))
+   :help-callback 'on-main-window-tooltip
+   :destroy-callback 'on-destroy))
 
 
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
@@ -292,21 +295,6 @@
 (defun on-about-window ()
   (capi:display-message-on-screen (capi:convert-to-screen nil)
                                   string.about-text))
-
-
-(defun on-browse-button (data self)
-  (with-slots (input-directory-edit output-directory-edit) self
-    (let ((field nil)
-          (message nil))
-      (cond ((eql data 'input)
-             (setf field input-directory-edit
-                   message string.browse-input-dir-title))
-            ((eql data 'output)
-             (setf field output-directory-edit
-                   message string.browse-export-dir-title)))
-      (multiple-value-bind (dir result) (prompt-for-directory message)
-        (when result
-          (setf (capi:text-input-pane-text field) (namestring dir)))))))
 
 
 (defun on-collect-button (data self)
@@ -384,7 +372,7 @@
     (file-candidate-color candidate)))
 
 
-(defun edit-candidate-callback (item self)
+(defun on-candidate-dblclick (item self)
   (with-slots (proposal-table) self
     ;; make sense only for those with target
     (when (file-candidate-target item)
@@ -492,14 +480,10 @@ if T execute command from command-edit, otherwise just copy files"
 background operations happened"                                                
   (with-slots (copy-button
                collect-button
-               input-button
-               output-button
                input-directory-edit
                output-directory-edit) self
     (setf (button-enabled copy-button) enable
           (button-enabled collect-button) enable
-          (button-enabled input-button) enable
-          (button-enabled output-button) enable
           (text-input-pane-enabled input-directory-edit) enable
           (text-input-pane-enabled output-directory-edit) enable)))
 
@@ -577,6 +561,14 @@ background operations happened"
     (with-slots (proposal-table) self
       (when-let ((selected (choice-selected-items proposal-table)))
         (mapc (compose #'open-file #'namestring #'file-candidate-source) selected)))))
+
+
+(defun on-command-edit-changed (str edit interface size)
+  "Callback called when command text changed. Used to validate the command"
+  (declare (ignore interface size))
+  (setf (simple-pane-foreground edit)
+        (if (validate-command-string str) :black :red)))
+
 
 
 
