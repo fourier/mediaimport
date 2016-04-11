@@ -569,10 +569,16 @@ background operations happened"
 
 
 (defmethod on-candidates-menu-open ((self main-window))
-  (with-slots (proposal-table) self
-    (when-let ((selected (choice-selected-items proposal-table)))
-      ;; [[NSWorkspace sharedWorkspace] openFile:path];
-      (display-message string.open))))
+  "Contex menu item handler, open all selected files with as in finder"
+  (flet ((open-file (fname)
+           ;; this function implements the following from Cocoa:
+           ;; [[NSWorkspace sharedWorkspace] openFile:path];
+           (objc:invoke (objc:invoke "NSWorkspace" "sharedWorkspace") "openFile:" fname)))
+    (with-slots (proposal-table) self
+      (when-let ((selected (choice-selected-items proposal-table)))
+        (mapc (compose #'open-file #'namestring #'file-candidate-source) selected)))))
+
+
 
 
 @export
