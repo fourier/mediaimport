@@ -11,7 +11,8 @@
                #:cl-annot
                #:zpb-exif)
   :serial t
-  :components ((:file "utils")
+  :components ((:file "settings")
+               (:file "utils")
                (:file "strings")
                (:file "datetime")
                (:file "renamer")

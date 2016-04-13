@@ -152,7 +152,7 @@
                          :text string.default-filemasks
                          :visible-min-width '(:character 32)
                          :callback 'on-collect-button)
-   (pattern-edit text-input-pane :title string.output-pattern
+   (pattern-edit text-input-choice :title string.output-pattern
             :visible-min-width '(:character 32)
             :text string.default-output-pattern
             :callback 'on-collect-button)
@@ -491,7 +491,7 @@ background operations happened"
 (defmethod on-main-window-tooltip ((self main-window) pane type key)
   (when (eq type :tooltip) ;; the only possible type on Cocoa
     (ecase key
-      (pattern-edit string.patten-tooltip)
+      (pattern-edit string.pattern-tooltip)
       (command-edit string.command-tooltip))))
 
 
@@ -563,16 +563,16 @@ background operations happened"
         (mapc (compose #'open-file #'namestring #'file-candidate-source) selected)))))
 
 
-(defun on-command-edit-changed (str edit interface size)
+(defun on-command-edit-changed (str edit interface caret-pos)
   "Callback called when command text changed. Used to validate the command"
-  (declare (ignore interface size))
+  (declare (ignore interface caret-pos))
   (setf (simple-pane-foreground edit)
         (if (validate-command-string str) :black :red)))
 
 
-
-
-
+;;----------------------------------------------------------------------------
+;; The application entry point
+;;----------------------------------------------------------------------------
 @export
 (defun main ()
   (init)

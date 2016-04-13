@@ -70,7 +70,7 @@
   (start-copy-confirmation . "Are you sure want to start copying?")
   (duplicates-exist-confirmation . "Where are duplicates in targets. Proceed anyway?")
   (overwrite-confirmation . "Some existing files will be overwriten. Proceed anyway?")
-  (patten-tooltip . "The output file pattern.
+  (pattern-tooltip . "The output file pattern.
 Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\".
 If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions.
 Possible templates:
