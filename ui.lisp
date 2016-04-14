@@ -5,7 +5,8 @@
 (defpackage #:mediaimport.ui
   (:documentation "User interface definitions for MediaImport application")
   (:use #:cl #:capi #:alexandria
-        #:mediaimport.utils #:mediaimport.renamer #:mediaimport.strings)
+        #:mediaimport.utils #:mediaimport.renamer #:mediaimport.strings
+        #:mediaimport.settings)
   ;; these names should be from alexandria rather than lispworks
   (:shadowing-import-from #:alexandria if-let removef when-let* appendf copy-file with-unique-names nconcf when-let)
   (:add-use-defaults t))
@@ -121,7 +122,10 @@
 (define-interface main-window ()
   ;; slots
   ((application-interface :initarg :application-interface)
-   (duplicates :initform nil))
+   (duplicates :initform nil)
+   (settings :initform (make-instance
+                        'settings
+                        :application-name "MediaImport" :application-version "1.0")))
   (:menus
    ;; pop-up menu in the list of candidates
    (candidates-menu
@@ -230,6 +234,16 @@
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
   (setf (button-enabled (slot-value self 'copy-button)) nil)
   (toggle-custom-command self nil))
+
+
+(defmethod top-level-interface-geometry-key ((self main-window))
+  "Sets the key to read/write geometry position"
+  (values "geometry" (product (slot-value self 'settings))))
+
+
+(defmethod top-level-interface-save-geometry-p ((self main-window))
+  "Returns true if need to save geometry"
+  t)
 
 
 (defclass file-candidate-item (file-candidate)
