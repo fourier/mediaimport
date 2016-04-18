@@ -31,7 +31,8 @@
           :document-types nil
           ;; ...or CFBundleIdentifier from the LispWorks bundle
           :identifier "com.github.fourier.mediaimport")
-         5
+         4
          :interface :capi
+         :keep-symbols '(mediaimport.ui::geometry-settings) ;; why doesn't work ?
          :startup-bitmap-file nil)
 

@@ -232,13 +232,14 @@
 
 
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
+  "Constructor for the main-window class"
   (setf (button-enabled (slot-value self 'copy-button)) nil)
   (toggle-custom-command self nil))
 
 
 (defmethod top-level-interface-geometry-key ((self main-window))
   "Sets the key to read/write geometry position"
-  (values "geometry" (product (slot-value self 'settings))))
+  (values :geometry-settings (product (slot-value self 'settings))))
 
 
 (defmethod top-level-interface-save-geometry-p ((self main-window))
@@ -290,8 +291,44 @@
       (unless (eql old-status (file-candidate-status cand))
         (update-candidate-status cand)
         (funcall redisplay-function cand))))
-  
 
+
+(defmethod restore-filemasks-field ((self main-window))
+  "Replaces the contents of the filemasks edit field with the stored"
+  (with-slots (input-filemasks-edit settings) self
+  ))
+
+
+(defmethod restore-pattern-field ((self main-window))
+  "Replaces the contents of the pattern edit field with the stored"
+  (with-slots (pattern-edit settings) self
+  ))
+
+
+(defmethod restore-command-field ((self main-window))
+  "Replaces the contents of the command edit field with the stored"
+  (with-slots (command-edit settings) self
+  ))
+
+
+(defmethod save-filemasks-field ((self main-window))
+  "Saves the file masks field contents to the permanent storage"
+  (with-slots (input-filemasks-edit settings) self
+  ))
+
+
+(defmethod save-pattern-field ((self main-window))
+  "Saves the pattern field contents to the permanent storage"
+  (with-slots (pattern-edit settings) self
+  ))
+
+
+(defmethod save-command-field ((self main-window))
+  "Saves the custom command field contents to the permanent storage"
+  (with-slots (command-edit settings) self
+  ))
+
+  
 (defmethod update-candidates ((self main-window) candidates)
   (with-slots (duplicates proposal-table) self
     (setf duplicates (make-instance 'duplicate-finder
