@@ -142,17 +142,17 @@
 
   ;; ui elements
   (:panes
-   (input-directory-edit text-input-pane :callback 'on-collect-button
+   (input-directory-edit text-input-choice :callback 'on-collect-button
                          :title string.choose-input
                          :buttons 
                          '(:browse-file (:directory t :image :std-file-open) :ok nil))
-   (output-directory-edit text-input-pane :callback 'on-collect-button
+   (output-directory-edit text-input-choice :callback 'on-collect-button
                           :title string.choose-output
                          :buttons 
                          '(:browse-file (:directory t :image :std-file-open) :ok nil))
    (recursive-checkbox check-button :text string.search-in-subdirs)
    (exif-checkbox check-button :text string.use-exif)
-   (input-filemasks-edit text-input-pane :title string.filemasks-label
+   (input-filemasks-edit text-input-choice :title string.filemasks-label
                          :text string.default-filemasks
                          :visible-min-width '(:character 32)
                          :callback 'on-collect-button)
@@ -163,7 +163,7 @@
    (command-checkbox check-button :text string.use-custom-command
                      :callback 'on-command-checkbox
                      :retract-callback 'on-command-checkbox)
-   (command-edit text-input-pane :visible-min-width '(:character 40)
+   (command-edit text-input-choice :visible-min-width '(:character 40)
                  :callback 'on-collect-button
                  :text-change-callback 'on-command-edit-changed)
    (save-script-button push-button :text string.save-script :callback 'on-save-script-button)
@@ -234,9 +234,10 @@
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
   "Constructor for the main-window class"
   (setf (button-enabled (slot-value self 'copy-button)) nil)
-  (toggle-custom-command self nil))
-
-
+  (toggle-custom-command self nil)
+  ;;(set-value (slot-value self 'settings) (symbol-name 'input-filemasks-edit) nil)
+  (restore-edit-controls-history self))
+    
 (defmethod top-level-interface-geometry-key ((self main-window))
   "Sets the key to read/write geometry position"
   (values :geometry-settings (product (slot-value self 'settings))))
@@ -292,41 +293,49 @@
         (update-candidate-status cand)
         (funcall redisplay-function cand))))
 
+(defmethod get-text-choice-panes ((self main-window))
+  "Returns a list of symbol names of all text-input-choice panes of SELF"
+  ;; extract slot name
+  (mapcar (lambda (slot) (slot-value slot 'clos::name))
+          ;; iterate over slots keep only those of type capi:text-input-choice
+          (remove-if-not (lambda (slot)
+                           (typep (slot-value self (slot-value slot 'clos::name)) 'capi:text-input-choice))
+                         (class-slots (class-of self)))))
 
-(defmethod restore-filemasks-field ((self main-window))
-  "Replaces the contents of the filemasks edit field with the stored"
-  (with-slots (input-filemasks-edit settings) self
-  ))
+(defmethod restore-edit-controls-history ((self main-window))
+  "Replaces the contents of all edit-choice fields with the stored"
+  (with-slots (settings) self
+    ;; for each edit
+    (mapc (lambda (edit)
+            ;; get the default value
+            (let* ((default-value 
+                    (text-input-pane-text (slot-value self edit)))
+                   ;; get the history
+                   (history
+                    ;; if default value is not empty
+                    (if (> (length default-value) 0)
+                        (get-value settings (symbol-name edit) (list default-value))
+                        ;; otherwise just take the history
+                        (get-value settings (symbol-name edit)))))
+              ;; no need to set the empty history
+              (unless (null history)
+                (setf (collection-items (slot-value self edit)) history
+                      (text-input-pane-text (slot-value self edit)) (car history)))))
+          (get-text-choice-panes self))))
 
 
-(defmethod restore-pattern-field ((self main-window))
-  "Replaces the contents of the pattern edit field with the stored"
-  (with-slots (pattern-edit settings) self
-  ))
-
-
-(defmethod restore-command-field ((self main-window))
-  "Replaces the contents of the command edit field with the stored"
-  (with-slots (command-edit settings) self
-  ))
-
-
-(defmethod save-filemasks-field ((self main-window))
-  "Saves the file masks field contents to the permanent storage"
-  (with-slots (input-filemasks-edit settings) self
-  ))
-
-
-(defmethod save-pattern-field ((self main-window))
-  "Saves the pattern field contents to the permanent storage"
-  (with-slots (pattern-edit settings) self
-  ))
-
-
-(defmethod save-command-field ((self main-window))
-  "Saves the custom command field contents to the permanent storage"
-  (with-slots (command-edit settings) self
-  ))
+(defmethod save-edit-controls-history ((self main-window))
+  "Saves the history of all edit fields"
+  (with-slots (settings) self
+    ;; for each edit
+    (mapc (lambda (edit)
+            ;; get the default value
+            (let* ((txt (text-input-pane-text (slot-value self edit)))
+                   (items (map 'list #'identity (collection-items (slot-value self edit)))))
+              (when (> (length txt) 0)
+                (pushnew txt items :test #'string-equal )
+                (set-value settings (symbol-name edit) items))))
+          (get-text-choice-panes self))))
 
   
 (defmethod update-candidates ((self main-window) candidates)
@@ -365,6 +374,8 @@
               ((not (directory-exists-p dest-path))
                (display-message string.dir-not-exists-fmt dest-path))
               ;; do processing only when directories are not the same
+              ((equalp (truename source-path) (truename dest-path))
+               (display-message string.source-dest-must-differ))
               ((not (equalp (truename source-path) (truename dest-path)))
                (let* ((masks (text-input-pane-text input-filemasks-edit))
                       (pattern-text (text-input-pane-text pattern-edit))
@@ -375,6 +386,8 @@
                                         :filemasks masks
                                         :use-exif (button-selected exif-checkbox)
                                         :recursive (button-selected recursive-checkbox))))
+                 ;; save the edit fields to the history
+                 (save-edit-controls-history self)
                  (toggle-progress self t :end 1)
                  ;; start worker thread
                  (mp:process-run-function "Collect files" nil #'collect-files-thread-fun self r))))))))
@@ -543,7 +556,8 @@ background operations happened"
   (when (eq type :tooltip) ;; the only possible type on Cocoa
     (ecase key
       (pattern-edit string.pattern-tooltip)
-      (command-edit string.command-tooltip))))
+      (command-edit string.command-tooltip)
+      (input-filemasks-edit string.filemasks-tooltip))))
 
 
 (defmethod on-save-script-button (data (self main-window))

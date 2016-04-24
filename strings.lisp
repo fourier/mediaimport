@@ -48,7 +48,7 @@
   (choose-output . "To Directory")
   (search-in-subdirs . "Search in subdirectories")
   (use-exif . "Use EXIF for JPG")
-  (filemasks-label . "Comma-separated list of file masks, like \"*.jpg,*.png\"")
+  (filemasks-label . "File masks")
   (default-filemasks . "*.jpg")
   (output-pattern . "Output pattern")
   (default-output-pattern . "{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg")
@@ -89,6 +89,11 @@ Example: \"convert -resize 1024x768 {SOURCE} {TARGET}
 Possible templates:
 {SOURCE} full path to the source file
 {TARGET} full path to the target file")
+  (filemasks-tooltip . "Comma-separated list of file masks, like \"*.jpg,*.png\"")  
   (prompt-save-script . "Choose script name to save")
   (remove-files-fmt . "Remove these files from the list?~%~{~A~^~%~}")
+  (clear-history-button . "Clear")
+  (clear-history-tooltip . "Clear history for this field")
+  (clear-history-question . "Clear history?")
+  (source-dest-must-differ . "Source and destination directories must be different")
   )

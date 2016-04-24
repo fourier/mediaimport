@@ -56,7 +56,7 @@ If FALLBACK-VALUE specified, use this if not found (and update the storage)"
   (with-slots (company-symbol settings-path) self
     (multiple-value-bind (value result)
         (user-preference settings-path key :product company-symbol)
-      (cond (result (values value result))
+      (cond ((and result value) (values value result))
             (fallback-value
              (progn
                (setf (user-preference settings-path key :product company-symbol) fallback-value)
