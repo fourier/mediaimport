@@ -46,6 +46,10 @@
       ((string.about-menu
         :callback 'on-about-window
         :callback-type :none)))
+     (:component
+      ((string.clear-history-menu
+        :callback 'on-clear-history-button
+        :callback-type :interface)))
 #|   ;; no preferences for now
      (:component
       (("Preferences..."
@@ -154,20 +158,37 @@
    (exif-checkbox check-button :text string.use-exif)
    (input-filemasks-edit text-input-choice :title string.filemasks-label
                          :text string.default-filemasks
-                         :visible-min-width '(:character 32)
+                         ;:visible-min-width '(:character 32)
+                         :visible-max-width nil
+                         :visible-max-height nil
+                         :visible-min-height '(:character 1)
                          :callback 'on-collect-button)
    (pattern-edit text-input-choice :title string.output-pattern
-            :visible-min-width '(:character 32)
+            ;:visible-min-width '(:character 32)
+                 :visible-max-width nil
+                 :visible-max-height '(:character 1)
             :text string.default-output-pattern
             :callback 'on-collect-button)
-   (command-checkbox check-button :text string.use-custom-command
-                     :callback 'on-command-checkbox
-                     :retract-callback 'on-command-checkbox)
    (command-edit text-input-choice :visible-min-width '(:character 40)
+                 :title string.custom-command
                  :callback 'on-collect-button
                  :text-change-callback 'on-command-edit-changed)
    (save-script-button push-button :text string.save-script :callback 'on-save-script-button)
    (collect-button push-button :text string.collect-data :callback 'on-collect-button)
+   (settings-panel check-button-panel
+                   :visible-max-width nil
+                   :visible-max-height nil
+                   :items `((:use-exif . ,string.use-exif)
+                            (:search-in-subdirs . ,string.search-in-subdirs)
+                            (:use-custom-command . ,string.use-custom-command)
+                            (:move-instead-of-copy . ,string.move-instead-of-copy))
+                   :print-function #'cdr
+                   :callbacks '(nil nil on-settings-checkbox nil)
+                   :retract-callback 'on-settings-checkbox
+                   :layout-class 'grid-layout
+                   :layout-args '(:columns 2))
+
+   
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
                    :visible-min-height '(:character 10)
@@ -191,32 +212,29 @@
    (output-edit collector-pane :buffer-name "Output buffer")
    (copy-button push-button :text string.copy-button :callback 'on-copy-button)
    (progress-bar progress-bar))
-  ;; Layout
   (:layouts
    (input-output-layout column-layout '(input-directory-edit output-directory-edit))
-
-
-   (options-layout grid-layout '(input-filemasks-edit recursive-checkbox 
-                                                      pattern-edit exif-checkbox)
-                      :columns 2 :rows 2
-                      :x-adjust '(:left :right)
-                      :y-adjust '(:center :center))
-   (command-layout row-layout '(command-checkbox command-edit save-script-button)
+   (left-edits-layout column-layout '(input-filemasks-edit pattern-edit))
+   (options-layout row-layout '(left-edits-layout settings-panel)
+                   :x-adjust '(:right :left)
+                   :x-ratios '(1 nil)
+                   :title string.settings
+                   :title-position :frame)
+   (command-layout row-layout '(command-edit save-script-button)
                    :adjust :center
-                   :x-ratios '(nil 1 nil))
+                   :x-ratios '(1 nil))
    (proposal-and-output-layout tab-layout '(proposal-table output-edit)
                                :print-function 'car
                                :visible-child-function 'second
-                               :items `((,string.files-pane proposal-table)
-                                       (,string.output-pane output-edit)))
+                               :items (list (list string.files-pane 'proposal-table)
+                                            (list string.output-pane 'output-edit)))
    (progress-layout switchable-layout '(nil progress-bar))
     
    (main-layout column-layout '(input-output-layout
                                 options-layout
-                                command-layout
+                                command-layout 
                                 collect-button
                                 proposal-and-output-layout
-                                ;proposal-table 
                                 copy-button
                                 progress-layout)
                 :adjust :center
@@ -586,11 +604,12 @@ background operations happened"
       (capi:destroy application-interface))))
 
 
-(defmethod on-command-checkbox (data (self main-window))
+(defmethod on-settings-checkbox (data (self main-window))
   "Callback called when toggled command checkbox"
-  (declare (ignore data))
-  (with-slots (command-checkbox) self
-    (toggle-custom-command self (button-selected command-checkbox))))
+  (print "on-settings-checkbox")
+  (print data))
+  ;(with-slots (command-checkbox) self
+  ;  (toggle-custom-command self (button-selected command-checkbox))))
 
 
 (defmethod toggle-custom-command ((self main-window) enable)
@@ -633,6 +652,22 @@ background operations happened"
   (declare (ignore interface caret-pos))
   (setf (simple-pane-foreground edit)
         (if (validate-command-string str) :black :red)))
+
+
+(defmethod clear-history ((self main-window))
+  (let ((edits (get-text-choice-panes self)))
+    
+    (prompt-with-list
+     (mapcar (compose #'titled-object-title (curry #'slot-value self)) edits)
+     "Clear history:"
+     :interaction :multiple-selection
+     :choice-class 'button-panel
+     :pane-args
+     '(:layout-class column-layout))))
+
+
+(defmethod on-clear-history-button ((self cocoa-application-interface))
+  (clear-history (main-window self)))
 
 
 ;;----------------------------------------------------------------------------

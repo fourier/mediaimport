@@ -217,6 +217,6 @@ and the constants will be accessible like string.to etc.
                                       (symbol-name (car string-item))))))
                    `(progn
                       (export ',(or res-name '(nil)))
-                      (defconstant ,res-name ,(cdr string-item)))))
+                      (defparameter ,res-name ,(cdr string-item)))))
                string-list)))
 
