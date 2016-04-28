@@ -32,6 +32,14 @@
                                   :sort 'string-lessp
                                   :reverse-sort 'string-greaterp)))
 
+(defparameter *settings-checkboxes*
+  `((:use-exif . ,string.use-exif)
+    (:search-in-subdirs . ,string.search-in-subdirs)
+    (:use-custom-command . ,string.use-custom-command)
+    (:move-instead-of-copy . ,string.move-instead-of-copy))
+  "Data for the settings checkboxes - symbol to string mapping")
+  
+
 ;;----------------------------------------------------------------------------
 ;; The application interface
 ;;----------------------------------------------------------------------------
@@ -154,17 +162,13 @@
                           :title string.choose-output
                          :buttons 
                          '(:browse-file (:directory t :image :std-file-open) :ok nil))
-   (recursive-checkbox check-button :text string.search-in-subdirs)
-   (exif-checkbox check-button :text string.use-exif)
    (input-filemasks-edit text-input-choice :title string.filemasks-label
                          :text string.default-filemasks
-                         ;:visible-min-width '(:character 32)
                          :visible-max-width nil
                          :visible-max-height nil
                          :visible-min-height '(:character 1)
                          :callback 'on-collect-button)
    (pattern-edit text-input-choice :title string.output-pattern
-            ;:visible-min-width '(:character 32)
                  :visible-max-width nil
                  :visible-max-height '(:character 1)
             :text string.default-output-pattern
@@ -178,13 +182,10 @@
    (settings-panel check-button-panel
                    :visible-max-width nil
                    :visible-max-height nil
-                   :items `((:use-exif . ,string.use-exif)
-                            (:search-in-subdirs . ,string.search-in-subdirs)
-                            (:use-custom-command . ,string.use-custom-command)
-                            (:move-instead-of-copy . ,string.move-instead-of-copy))
+                   :items *settings-checkboxes*
                    :print-function #'cdr
-                   :callbacks '(nil nil on-settings-checkbox nil)
-                   :retract-callback 'on-settings-checkbox
+                   :selection-callback 'on-settings-checkbox-selected
+                   :retract-callback 'on-settings-checkbox-retracted
                    :layout-class 'grid-layout
                    :layout-args '(:columns 2))
 
@@ -381,9 +382,7 @@
   (with-slots (input-directory-edit
                output-directory-edit
                input-filemasks-edit
-               pattern-edit
-               recursive-checkbox
-               exif-checkbox) self
+               pattern-edit) self
     (let ((source-path (text-input-pane-text input-directory-edit))
           (dest-path (text-input-pane-text output-directory-edit)))
       (when (and (> (length source-path) 0) (> (length dest-path) 0))
@@ -402,8 +401,8 @@
                                         :destination-path dest-path
                                         :pattern pattern-text
                                         :filemasks masks
-                                        :use-exif (button-selected exif-checkbox)
-                                        :recursive (button-selected recursive-checkbox))))
+                                        :use-exif (setting-selected self :use-exif)
+                                        :recursive (setting-selected self :search-in-subdirs))))
                  ;; save the edit fields to the history
                  (save-edit-controls-history self)
                  (toggle-progress self t :end 1)
@@ -472,8 +471,8 @@
 
 (defun on-copy-button (data self)
   (declare (ignore data))
-  (with-slots (proposal-table command-checkbox) self
-    (let ((do-copy (button-selected command-checkbox)))
+  (with-slots (proposal-table) self
+    (let ((do-copy (setting-selected self :use-custom-command)))
       ;; ask for confirmation
       (when (confirm-yes-or-no
              string.start-copy-confirmation)
@@ -604,12 +603,32 @@ background operations happened"
       (capi:destroy application-interface))))
 
 
-(defmethod on-settings-checkbox (data (self main-window))
-  "Callback called when toggled command checkbox"
-  (print "on-settings-checkbox")
-  (print data))
-  ;(with-slots (command-checkbox) self
-  ;  (toggle-custom-command self (button-selected command-checkbox))))
+(defmethod on-settings-checkbox-selected (data (self main-window))
+  "Callback called when selected one of settings checkboxes"
+  (print "on-settings-checkbox-selected")
+  (print data)
+  (case (car data)
+    (:use-custom-command
+     (toggle-custom-command self t))
+    (t nil)))
+
+
+(defmethod on-settings-checkbox-retracted (data (self main-window))
+  "Callback called when retracted selection of settings checkboxes"
+  (print "on-settings-checkbox-retracted")
+  (print data)
+  (case (car data)
+    (:use-custom-command
+     (toggle-custom-command self nil))
+    (t nil)))
+
+
+(defmethod setting-selected ((self main-window) option)
+  "Check if the settings checkbox selected. OPTION is one of
+symbols in *settings-checkboxes*"
+  (with-slots (settings-panel) self
+    (when-let (selected (mapcar #'car (choice-selected-items settings-panel)))
+      (member option selected))))
 
 
 (defmethod toggle-custom-command ((self main-window) enable)
