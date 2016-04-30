@@ -163,7 +163,6 @@
                          :buttons 
                          '(:browse-file (:directory t :image :std-file-open) :ok nil))
    (input-filemasks-edit text-input-choice :title string.filemasks-label
-                         :text string.default-filemasks
                          :visible-max-width nil
                          :visible-max-height nil
                          :visible-min-height '(:character 1)
@@ -171,7 +170,6 @@
    (pattern-edit text-input-choice :title string.output-pattern
                  :visible-max-width nil
                  :visible-max-height '(:character 1)
-            :text string.default-output-pattern
             :callback 'on-collect-button)
    (command-edit text-input-choice :visible-min-width '(:character 40)
                  :title string.custom-command
@@ -252,10 +250,18 @@
 
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
   "Constructor for the main-window class"
-  (setf (button-enabled (slot-value self 'copy-button)) nil)
-  (toggle-custom-command self nil)
-  ;;(set-value (slot-value self 'settings) (symbol-name 'input-filemasks-edit) nil)
-  (restore-edit-controls-history self))
+  (with-slots (copy-button
+               input-filemasks-edit
+               pattern-edit)
+      self
+    (setf (button-enabled copy-button) nil)
+    (toggle-custom-command self nil)
+    ;; set default values
+    (setf
+     (capi-object-property input-filemasks-edit 'default-value) string.default-filemasks
+     (capi-object-property pattern-edit 'default-value) string.default-output-pattern)
+
+    (restore-edit-controls-history self)))
     
 (defmethod top-level-interface-geometry-key ((self main-window))
   "Sets the key to read/write geometry position"
@@ -328,7 +334,7 @@
     (mapc (lambda (edit)
             ;; get the default value
             (let* ((default-value 
-                    (text-input-pane-text (slot-value self edit)))
+                    (capi-object-property (slot-value self edit) 'default-value))
                    ;; get the history
                    (history
                     ;; if default value is not empty
@@ -674,18 +680,28 @@ symbols in *settings-checkboxes*"
 
 
 (defmethod clear-history ((self main-window))
-  (let ((edits (get-text-choice-panes self)))
-    
-    (prompt-with-list
-     (mapcar (compose #'titled-object-title (curry #'slot-value self)) edits)
-     "Clear history:"
-     :interaction :multiple-selection
-     :choice-class 'button-panel
-     :pane-args
-     '(:layout-class column-layout))))
+  "Launch the Clear history dialog and clear history for selected edits."
+  (with-slots (settings) self
+    (let ((clear-from
+           ;; list of edits - output from the dialog
+           (prompt-with-list (get-text-choice-panes self)
+                             string.clear-history-dialog-title
+                             :interaction :multiple-selection
+                             :choice-class 'button-panel
+                             :print-function (compose #'titled-object-title (curry #'slot-value self))
+                             :pane-args
+                             '(:layout-class column-layout))))
+      (when clear-from
+        (print clear-from)
+        ;; for every edit selected set nil corresponding setting
+        (mapc (lambda (edit)
+                (set-value settings (symbol-name edit) nil))
+              clear-from)
+        (restore-edit-controls-history self)))))
 
 
 (defmethod on-clear-history-button ((self cocoa-application-interface))
+  "Clear History menu item handler"
   (clear-history (main-window self)))
 
 
