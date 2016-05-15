@@ -568,11 +568,18 @@ background operations happened"
   (with-slots (copy-button
                collect-button
                input-directory-edit
-               output-directory-edit) self
+               output-directory-edit
+               options-layout
+               input-filemasks-edit
+               pattern-edit
+               settings-panel) self
     (setf (button-enabled copy-button) enable
           (button-enabled collect-button) enable
           (text-input-pane-enabled input-directory-edit) enable
-          (text-input-pane-enabled output-directory-edit) enable)))
+          (text-input-pane-enabled output-directory-edit) enable
+          (text-input-pane-enabled input-filemasks-edit) enable
+          (text-input-pane-enabled pattern-edit) enable
+          (simple-pane-enabled settings-panel) enable)))
 
 
 (defmethod on-main-window-tooltip ((self main-window) pane type key)

@@ -452,6 +452,9 @@ is called every time file copied.
 CALLBACK is a function of 2 arguments: index of the element in the
 FILE-CANDIDATES array and a string error-text if an error happened.
 In case of success 2nd argument is nil."
+  ;;
+  ;; error occured while copying
+  ;; CONDITIONS:FILE-STREAM-ERROR occured, arguments : (:ERRNO 57 :READ "copying to" :STREAM #P"/Volumes/storage-1/Media/Photo Archive/Mobile photos Alexey/2015-07-11/Video-15_56.MOV")
   (map-iota
    (lambda (i)
      (let* ((cand (aref file-candidates i))
@@ -465,7 +468,7 @@ In case of success 2nd argument is nil."
                        (ensure-directories-exist (fad:pathname-directory-pathname to))
                        (copy-file from to)
                        nil)
-                   (file-error (err)
+                   (error (err)
                      (format nil "~a" err))))))
             ;; if callback function is provided, call it
        (when callback
