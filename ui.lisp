@@ -359,7 +359,8 @@
                    (items (map 'list #'identity (collection-items (slot-value self edit)))))
               (when (> (length txt) 0)
                 (pushnew txt items :test #'string-equal )
-                (set-value settings (symbol-name edit) items))))
+                (set-value settings (symbol-name edit) items)
+                (setf (collection-items (slot-value self edit)) items))))
           (get-text-choice-panes self))))
 
   
