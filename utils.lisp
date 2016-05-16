@@ -26,6 +26,35 @@
     #\Space)
   "List of special characters to be escaped in file mask")
 
+@export
+(defmacro from (package import name &rest others)
+  "Import symbol(s) NAME ... from the package PACKAGE.
+Examples:
+(from mediaimport.utils import interleave partition +regex-escape-chars+)
+(from mediaimport.ui import save-edit-controls-history)
+(from mediaimport.utils import *)
+In the last example imports all the exported symbols from the package given."
+  (unless (string-equal import 'import)
+    (error "Unexpected keyword: expected IMPORT, got ~A" import))
+  (let* ((pkg (string-upcase (symbol-name package))) ;; package name as a string
+         (symbols ; symbols to be imported
+          (if (and (not others) (string-equal name "*"))
+              ;; if called like (from something import *)
+              (let (symbols)
+                (do-symbols (s pkg)
+                  (multiple-value-bind (symb type)
+                      (find-symbol (symbol-name s) pkg)
+                    (when (eq type :external)
+                      (push symb symbols))))
+                symbols)
+              ;; otherwise just arguments list
+              (cons name others))))
+    `(progn
+       ,@(mapcar (lambda (symb)
+                   (let ((import-symbol (find-symbol (string-upcase (symbol-name symb)) pkg)))
+                     `(shadowing-import ,(list 'quote import-symbol))))
+                 symbols))))
+
 
 @export
 (defun interleave (list1 list2)
