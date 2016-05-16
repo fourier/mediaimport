@@ -41,11 +41,8 @@ In the last example imports all the exported symbols from the package given."
           (if (and (not others) (string-equal name "*"))
               ;; if called like (from something import *)
               (let (symbols)
-                (do-symbols (s pkg)
-                  (multiple-value-bind (symb type)
-                      (find-symbol (symbol-name s) pkg)
-                    (when (eq type :external)
-                      (push symb symbols))))
+                (do-external-symbols (s pkg)
+                  (push s symbols))
                 symbols)
               ;; otherwise just arguments list
               (cons name others))))
