@@ -358,8 +358,11 @@
             (let* ((txt (text-input-pane-text (slot-value self edit)))
                    (items (map 'list #'identity (collection-items (slot-value self edit)))))
               (when (> (length txt) 0)
-                (pushnew txt items :test #'string-equal )
+                ;; move current value to the top in history
+                (setf items (push-top txt items :test #'string-equal))
+                ;; store items
                 (set-value settings (symbol-name edit) items)
+                ;; and finally update the ui
                 (setf (collection-items (slot-value self edit)) items))))
           (get-text-choice-panes self))))
 
@@ -392,14 +395,17 @@
                pattern-edit) self
     (let ((source-path (text-input-pane-text input-directory-edit))
           (dest-path (text-input-pane-text output-directory-edit)))
+      ;; verify what paths are not empty
       (when (and (> (length source-path) 0) (> (length dest-path) 0))
+        ;; some sanity checks. if directories exists at all
         (cond ((not (directory-exists-p source-path))
                (display-message string.dir-not-exists-fmt source-path))
               ((not (directory-exists-p dest-path))
                (display-message string.dir-not-exists-fmt dest-path))
-              ;; do processing only when directories are not the same
+              ;; no import to the same directory
               ((equalp (truename source-path) (truename dest-path))
                (display-message string.source-dest-must-differ))
+              ;; do processing only when directories are not the same
               ((not (equalp (truename source-path) (truename dest-path)))
                (let* ((masks (text-input-pane-text input-filemasks-edit))
                       (pattern-text (text-input-pane-text pattern-edit))
@@ -412,6 +418,7 @@
                                         :recursive (setting-selected self :search-in-subdirs))))
                  ;; save the edit fields to the history
                  (save-edit-controls-history self)
+                 ;; toggle progress bar indication
                  (toggle-progress self t :end 1)
                  ;; start worker thread
                  (mp:process-run-function "Collect files" nil #'collect-files-thread-fun self r))))))))

@@ -246,3 +246,14 @@ and the constants will be accessible like string.to etc.
                       (defparameter ,res-name ,(cdr string-item)))))
                string-list)))
 
+@export
+(defun push-top (elt lst &key (test #'eql))
+  "Destructively push the element ELT to the top of the list LST, removing all
+elements ELT in the LST, keeping the topmost element unique.
+Example:
+=> (let ((lst (list \"aa\" \"bb\" \"cc\" \"dd\")))
+     (setf lst (push-top \"bb\" lst :test #'string-equal))
+     lst)
+(\"bb\" \"aa\" \"cc\" \"dd\")"
+  (deletef lst elt :test test)
+  (push elt lst))
