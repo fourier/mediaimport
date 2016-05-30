@@ -10,7 +10,7 @@ Media Import is a simple OSX utility for copying images(and other files) accordi
 - Allows to get timestamp from EXIF data for JPEG files
 
 ## Installation
-[This](https://github.com/fourier/mediaimport/raw/master/mediaimport.zip) archive contains the latest version.
+Go to [this location](https://github.com/fourier/mediaimport/releases) to download the latest version of the software.
 
 ## Copyright
 Copyright (c) [Alexey Veretennikov](mailto:alexey.veretennikov@gmail.com). Permitted to use for personal reasons only.
