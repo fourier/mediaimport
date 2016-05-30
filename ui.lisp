@@ -382,8 +382,9 @@
 
 
 (defun on-about-window ()
-  (capi:display-message-on-screen (capi:convert-to-screen nil)
-                                  string.about-text))
+  (capi:display-message-on-screen
+   (capi:convert-to-screen nil)
+   string.about-text (mediaimport.version:version-string)))
 
 
 (defun on-collect-button (data self)

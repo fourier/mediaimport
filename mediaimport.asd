@@ -12,6 +12,7 @@
                #:zpb-exif)
   :serial t
   :components ((:file "settings")
+               (:file "version")
                (:file "utils")
                (:file "strings")
                (:file "datetime")
