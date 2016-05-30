@@ -97,6 +97,7 @@ Possible templates:
   (clear-history-dialog-title . "Clear history")
   (clear-history-question . "Clear history for selected fields?")
   (source-dest-must-differ . "Source and destination directories must be different")
-  (move-instead-of-copy . "Move instead of Copy")
+  (move-instead-of-copy . "Delete original file")
+  (delete-original-confirmation . "Original files will be removed. Proceed?")
   (settings . "Settings")
   )

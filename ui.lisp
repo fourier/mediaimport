@@ -479,7 +479,8 @@
 (defun on-copy-button (data self)
   (declare (ignore data))
   (with-slots (proposal-table) self
-    (let ((do-copy (setting-selected self :use-custom-command)))
+    (let ((do-copy (setting-selected self :use-custom-command))
+          (delete-original (setting-selected self :move-instead-of-copy)))
       ;; ask for confirmation
       (when (confirm-yes-or-no
              string.start-copy-confirmation)
@@ -492,17 +493,20 @@
                           string.duplicates-exist-confirmation))
                      (or (not some-exists)
                          (confirm-yes-or-no
-                          string.overwrite-confirmation)))
+                          string.overwrite-confirmation))
+                     (or (not delete-original)
+                         (confirm-yes-or-no
+                          string.delete-original-confirmation)))
             (toggle-progress self t :end (length items))
             ;; start worker thread
             (mp:process-run-function "Copy files"
                                      nil
                                      #'copy-files-thread-fun
                                      self
-                                     items do-copy)))))))
+                                     items do-copy delete-original)))))))
 
 
-(defmethod copy-files-thread-fun ((self main-window) items external-command)
+(defmethod copy-files-thread-fun ((self main-window) items external-command delete-original)
   "Worker function to copy/apply command to files.
 ITEMS is an array of FILE-CANDIDATE-ITEMs. EXTERNAL-COMMAND is a boolean flag;
 if T execute command from command-edit, otherwise just copy files"
@@ -539,8 +543,9 @@ if T execute command from command-edit, otherwise just copy files"
                 (apply-command-to-files items
                                       cmd
                                       :callback #'copy-files-callback
-                                      :stream (collector-pane-stream (slot-value self 'output-edit))))))
-        (copy-files items :callback #'copy-files-callback))
+                                      :stream (collector-pane-stream (slot-value self 'output-edit))
+                                      :delete-original delete-original))))
+        (copy-files items :callback #'copy-files-callback :delete-original delete-original))
     ;; and finally update progress, hide it and enable all buttons
     (toggle-progress self nil :end (length items))))
 
@@ -570,7 +575,6 @@ background operations happened"
                collect-button
                input-directory-edit
                output-directory-edit
-               options-layout
                input-filemasks-edit
                pattern-edit
                settings-panel) self

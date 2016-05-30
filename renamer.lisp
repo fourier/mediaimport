@@ -445,13 +445,14 @@ this table first and add if not found"
 
 
 @export
-(defun copy-files (file-candidates &key callback)
+(defun copy-files (file-candidates &key callback delete-original)
   "Copy files from array FILE-CANDIDATES of type file-candidate.
 CALLBACK could be nil; if not nil, CALLBACK is a function which
 is called every time file copied.
 CALLBACK is a function of 2 arguments: index of the element in the
 FILE-CANDIDATES array and a string error-text if an error happened.
-In case of success 2nd argument is nil."
+In case of success 2nd argument is nil.
+DELETE-ORIGINAL if t remove the original file"
   ;;
   ;; error occured while copying
   ;; CONDITIONS:FILE-STREAM-ERROR occured, arguments : (:ERRNO 57 :READ "copying to" :STREAM #P"/Volumes/storage-1/Media/Photo Archive/Mobile photos Alexey/2015-07-11/Video-15_56.MOV")
@@ -470,7 +471,10 @@ In case of success 2nd argument is nil."
                        nil)
                    (error (err)
                      (format nil "~a" err))))))
-            ;; if callback function is provided, call it
+       ;; in case of success remove original
+       (when (and delete-original (not result))
+         (delete-file (file-candidate-source cand)))
+       ;; if callback function is provided, call it
        (when callback
          (funcall callback i result))))
      (length file-candidates)))
@@ -498,14 +502,16 @@ Will return VALUES (result, error-text), where RESULT is t if the
 
 @export
 (defun apply-command-to-files (file-candidates command-pattern
-                                               &key callback stream script)
+                                               &key
+                                               callback stream script delete-original)
   "Applies the command-patten to all candidates from the array FILE-CANDIDATES
 CALLBACK could be nil; if not nil, CALLBACK is a function which
 is called every time file copied.
 CALLBACK is a function of 2 arguments: index of the element in the
 FILE-CANDIDATES array and a string error-text if an error happened.
 In case of success 2nd argument is nil.
-STREAM is a stream to redirect output to"
+STREAM is a stream to redirect output to
+DELETE-ORIGINAL if t remove the original file"
   (when script
     (format stream "#!/bin/sh~%"))
   (map-iota
@@ -520,7 +526,10 @@ STREAM is a stream to redirect output to"
                            command
                            :output-stream stream
                            :prefix "")
-                          (format stream "~a~%" command))))
+                          (format stream "~a~%" command)))
+         ;; in case of success and not script remove original
+         (when (and delete-original (not result) (not script))
+           (delete-file (file-candidate-source cand))))
        (when callback
          (funcall callback i (when (/= 0 result)
                                (format nil string.failed-fmt command))))))
