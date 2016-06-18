@@ -46,12 +46,12 @@ In the last example imports all the exported symbols from the package given."
                 symbols)
               ;; otherwise just arguments list
               (cons name others))))
-    `(progn
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (progn
        ,@(mapcar (lambda (symb)
                    (let ((import-symbol (find-symbol (string-upcase (symbol-name symb)) pkg)))
                      `(shadowing-import ,(list 'quote import-symbol))))
-                 symbols))))
-
+                 symbols)))))
 
 @export
 (defun interleave (list1 list2)
