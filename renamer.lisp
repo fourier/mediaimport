@@ -353,7 +353,7 @@ file names."
                       (concatenate 'string string.same-as- found))
               ;; all existing are not the same as our target. Bump it then!
               (setf (file-candidate-target cand)
-                    (bump-file-name target (1+ (get-maximum-file-version similar))))))))
+                    (bump-file-name target (1+ (or (get-maximum-file-version similar) 0))))))))
       candidates)))
               
 
