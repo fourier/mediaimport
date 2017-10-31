@@ -683,6 +683,8 @@ symbols in *settings-checkboxes*"
 
 (defmethod on-candidates-menu-open ((self main-window))
   "Contex menu item handler, open all selected files with as in finder"
+  #+win32 (display-message "Not implemented")
+  #+cocoa
   (flet ((open-file (fname)
            ;; this function implements the following from Cocoa:
            ;; [[NSWorkspace sharedWorkspace] openFile:path];
@@ -731,9 +733,14 @@ symbols in *settings-checkboxes*"
 @export
 (defun main ()
   (init)
+  #+cocoa
   (let ((application (make-instance 'cocoa-application-interface)))
     (set-application-interface application)
     (let ((main-window (make-instance 'main-window
                                       :application-interface application)))
       (setf (main-window application) main-window)
-      (display main-window))))
+      (display main-window)))
+  #+win32
+  (let ((interface (make-instance 'main-window :application-interface nil)))
+      (display interface)))
+
