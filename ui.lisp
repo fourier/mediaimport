@@ -44,7 +44,7 @@
 ;; The application interface
 ;;----------------------------------------------------------------------------
 
-(define-interface cocoa-application-interface (cocoa-default-application-interface)
+(define-interface cocoa-application-interface (#+:cocoa cocoa-default-application-interface)
   ((main-window :initform nil
                 :accessor main-window))
   (:menus
