@@ -7,7 +7,7 @@
 (annot:enable-annot-syntax)
 
 
-(defconstant +regex-escape-chars+
+(define-constant +regex-escape-chars+
   '(#\\
     #\*
     #\+
@@ -24,7 +24,8 @@
     #\.
     #\#
     #\Space)
-  "List of special characters to be escaped in file mask")
+  :test #'equal
+  :documentation "List of special characters to be escaped in file mask")
 
 @export
 (defmacro from (package import name &rest others)
@@ -153,7 +154,8 @@ Example:
       (let ((regex
              (make-array (+ 8 (length wildcard))
                          :element-type
-                         'lw:bmp-char
+                         #+lispworks 'lw:bmp-char
+                         #-lispworks 'character
                          :fill-pointer 0
                          :adjustable t)))
         (unless case-sensitive-p

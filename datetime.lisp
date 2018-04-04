@@ -1,11 +1,11 @@
 ;;;; datetime.lisp
 (defpackage #:mediaimport.datetime
-  (:use #:cl #:cl-annot.class))
+  (:use #:cl #:cl-annot.class #:alexandria))
 
 (in-package #:mediaimport.datetime)
 (annot:enable-annot-syntax)
 
-(defconstant +months+
+(define-constant +months+
   #((:en "January"   :ru "Январь")
     (:en "February"  :ru "Февраль")
     (:en "March"     :ru "Март")
@@ -17,7 +17,8 @@
     (:en "September" :ru "Сентябрь")
     (:en "October"   :ru "Октябрь")
     (:en "November"  :ru "Ноябрь")
-    (:en "December"  :ru "Декабрь")))
+    (:en "December"  :ru "Декабрь"))
+  :test #'equalp)
 
 
 @export-structure
@@ -47,8 +48,8 @@ Example:
   (let ((parsed-numbers
          (mapcar #'parse-integer (apply #'append
                                         (mapcar (lambda (x)
-                                                  (lw:split-sequence ":" x))
-                                                (lw:split-sequence " " str))))))
+                                                  (split-sequence:split-sequence #\: x))
+                                                (split-sequence:split-sequence #\Space str))))))
     (apply #'create-datetime parsed-numbers)))
 
 
@@ -59,7 +60,7 @@ extracted with zpb-exif library, GPSDateStamp(GDS) and GPSTimeStamp(GTS).
 The GPSDateStamp is in format like\"2015:06:09\"
 The GPSTimeStamp is in format like #(18 29 299/10)"
   (let ((parsed-numbers
-         (append (mapcar #'parse-integer (lw:split-sequence ":" gds))
+         (append (mapcar #'parse-integer (split-sequence:split-sequence #\: gds))
                  (mapcar #'truncate (map 'list #'identity  gts)))))
     (apply #'create-datetime parsed-numbers)))
 
@@ -92,7 +93,9 @@ the file FILENAME. If no EXIF found returns nil"
                (make-datetime-from-string (or dto dt)))
               ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
                (make-datetime-from-gps-timestamps gds gts))))
-    (zpb-exif:invalid-exif-stream (err) nil)))
+    (zpb-exif:invalid-exif-stream (err)
+      (declare (ignore err))
+      nil)))
 
 
 @export

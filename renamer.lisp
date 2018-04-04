@@ -9,14 +9,38 @@
 (annot:enable-annot-syntax)
 
 
-(defconstant +timestamp-format-mapping+
-  (make-hash-table :test #'string=)
+(define-constant +timestamp-format-mapping+
+    (let ((ht (make-hash-table :test #'equalp)))
+      (setf (gethash "{YYYY}" ht)
+            (cons "~4,'0d" #'datetime-year)
+            (gethash "{MM}" ht)
+            (cons "~2,'0d" #'datetime-month)
+            (gethash "{MONTH}" ht)
+            (cons "~a" #'datetime-string-month)
+            (gethash "{MON}" ht)
+            (cons "~a" (lambda (x) (datetime-string-month x :short t)))
+            (gethash "{МЕСЯЦ}" ht)
+            (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
+            (gethash "{МЕС}" ht)
+            (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
+            (gethash "{DD}" ht)
+            (cons "~2,'0d" #'datetime-date)
+            (gethash "{hh}" ht)
+            (cons "~2,'0d" #'datetime-hour)
+            (gethash "{mm}" ht)
+            (cons "~2,'0d" #'datetime-minute)
+            (gethash "{ss}" ht)
+            (cons "~2,'0d" #'datetime-second))
+      ht)
+  :test #'equalp
+  :documentation
   "Hash table containing mapping between timestamp pseudo-formatting
 and (FORMAT formatting + getter function)")
 
-(defconstant +command-format-mapping+
-  (make-hash-table :test #'string=)
-  "Hash table containing mapping between command pseudo-formatting
+(define-constant +command-format-mapping+
+    (make-hash-table :test #'equalp)
+  :test #'equalp  
+  :documentation "Hash table containing mapping between command pseudo-formatting
 and (FORMAT formatting + getter function")
 
 
@@ -42,31 +66,31 @@ the input and output file name as well as the source file timestamp"))
 
 
 ;; fill the +timestamp-format-mapping+ and +command-format-mapping+
-(eval-when (:compile-toplevel :load-toplevel)
-  (setf (gethash "{YYYY}" +timestamp-format-mapping+)
-        (cons "~4,'0d" #'datetime-year)
-        (gethash "{MM}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-month)
-        (gethash "{MONTH}" +timestamp-format-mapping+)
-        (cons "~a" #'datetime-string-month)
-        (gethash "{MON}" +timestamp-format-mapping+)
-        (cons "~a" (lambda (x) (datetime-string-month x :short t)))
-        (gethash "{МЕСЯЦ}" +timestamp-format-mapping+)
-        (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
-        (gethash "{МЕС}" +timestamp-format-mapping+)
-        (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
-        (gethash "{DD}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-date)
-        (gethash "{hh}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-hour)
-        (gethash "{mm}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-minute)
-        (gethash "{ss}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-second))
-  (setf (gethash "{SOURCE}" +command-format-mapping+)
-        (cons "~s" (compose #'namestring #'file-candidate-source))
-        (gethash "{TARGET}" +command-format-mapping+)
-        (cons "~s" (compose #'namestring #'file-candidate-target))))
+;; (eval-when (:compile-toplevel :load-toplevel)
+;;   (setf (gethash "{YYYY}" +timestamp-format-mapping+)
+;;         (cons "~4,'0d" #'datetime-year)
+;;         (gethash "{MM}" +timestamp-format-mapping+)
+;;         (cons "~2,'0d" #'datetime-month)
+;;         (gethash "{MONTH}" +timestamp-format-mapping+)
+;;         (cons "~a" #'datetime-string-month)
+;;         (gethash "{MON}" +timestamp-format-mapping+)
+;;         (cons "~a" (lambda (x) (datetime-string-month x :short t)))
+;;         (gethash "{МЕСЯЦ}" +timestamp-format-mapping+)
+;;         (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
+;;         (gethash "{МЕС}" +timestamp-format-mapping+)
+;;         (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
+;;         (gethash "{DD}" +timestamp-format-mapping+)
+;;         (cons "~2,'0d" #'datetime-date)
+;;         (gethash "{hh}" +timestamp-format-mapping+)
+;;         (cons "~2,'0d" #'datetime-hour)
+;;         (gethash "{mm}" +timestamp-format-mapping+)
+;;         (cons "~2,'0d" #'datetime-minute)
+;;         (gethash "{ss}" +timestamp-format-mapping+)
+;;         (cons "~2,'0d" #'datetime-second))
+;;   (setf (gethash "{SOURCE}" +command-format-mapping+)
+;;         (cons "~s" (compose #'namestring #'file-candidate-source))
+;;         (gethash "{TARGET}" +command-format-mapping+)
+;;         (cons "~s" (compose #'namestring #'file-candidate-target))))
         
 
 

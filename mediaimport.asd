@@ -9,13 +9,14 @@
                #:cl-ppcre
                #:ironclad
                #:cl-annot
+               #:split-sequence
                #:zpb-exif)
   :serial t
-  :components ((:file "settings")
+  :components (#+lispworks(:file "settings")
                (:file "version")
                (:file "utils")
                (:file "strings")
                (:file "datetime")
                (:file "renamer")
-               (:file "ui")))
+               #+lispworks(:file "ui")))
 
