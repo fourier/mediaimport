@@ -1,9 +1,23 @@
 ;;;; datetime.lisp
 (defpackage #:mediaimport.datetime
-  (:use #:cl #:cl-annot.class #:alexandria))
-
+  (:use :cl :alexandria)
+  (:export
+   make-datetime-from-string
+   make-datetime-from-gps-timestamps
+   make-datetime-from-file
+   make-datetime-from-exif
+   datetime-string-month
+   ;; datetime structure
+   datetime
+   datetime-second
+   datetime-minute
+   datetime datetime-year
+   datetime-month
+   create-datetime
+   datetime-hour
+   datetime-date))
+   
 (in-package #:mediaimport.datetime)
-(annot:enable-annot-syntax)
 
 (define-constant +months+
   #((:en "January"   :ru "Январь")
@@ -21,7 +35,6 @@
   :test #'equalp)
 
 
-@export-structure
 (defstruct (datetime
             (:constructor create-datetime (year month date hour minute second))
             (:constructor))
@@ -29,7 +42,6 @@
   year month date hour minute second)
 
 
-@export
 (defmethod print-object ((self datetime) out)
   "Print overload for DATETIME struct"
   (format out "~4,'0d-~2,'0d-~2,'0d ~2,'0d:~2,'0d:~2,'0d"
@@ -39,7 +51,6 @@
           (datetime-hour self) (datetime-minute self) (datetime-second self)))
 
 
-@export
 (defun make-datetime-from-string (str)
   "Create a datetime struct from the string like \"2011:01:02 13:28:10\".
 Example:
@@ -53,7 +64,6 @@ Example:
     (apply #'create-datetime parsed-numbers)))
 
 
-@export
 (defun make-datetime-from-gps-timestamps (gds gts)
   "Create a datetime struct from pair of EXIF GPS timestamp values
 extracted with zpb-exif library, GPSDateStamp(GDS) and GPSTimeStamp(GTS).
@@ -65,7 +75,6 @@ The GPSTimeStamp is in format like #(18 29 299/10)"
     (apply #'create-datetime parsed-numbers)))
 
 
-@export
 (defun make-datetime-from-file (filename)
   "Create a datetime struct from the file timestamp"
   (multiple-value-bind (second minute hour date month year)
@@ -74,7 +83,6 @@ The GPSTimeStamp is in format like #(18 29 299/10)"
                    :hour hour :minute minute :second second)))
 
 
-@export
 (defun make-datetime-from-exif (filename)
   "Create a datetime struct from the EXIF information contianing in
 the file FILENAME. If no EXIF found returns nil"
@@ -98,7 +106,6 @@ the file FILENAME. If no EXIF found returns nil"
       nil)))
 
 
-@export
 (defun datetime-string-month (dt &key short (locale :en))
   "Return textual representation of the month"
   (let* ((month (datetime-month dt))

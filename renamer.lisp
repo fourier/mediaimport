@@ -1,7 +1,7 @@
 ;;;; renamer.lisp
 (defpackage #:mediaimport.renamer
   (:documentation "Application logic related to searching and renaming")
-  (:use #:cl #:cl-annot.class #:alexandria
+  (:use #:cl #:alexandria
         #:mediaimport.utils #:mediaimport.datetime #:mediaimport.strings)
   (:export
    file-candidate-target

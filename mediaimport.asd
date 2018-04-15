@@ -8,7 +8,7 @@
                #:cl-fad
                #:cl-ppcre
                #:ironclad
-               #:cl-annot
+               #:ppath
                #:split-sequence
                #:zpb-exif)
   :serial t

@@ -2,18 +2,23 @@
 ;; 
 (defpackage #:mediaimport.settings
   (:documentation "MediaImport application settings")
-  (:use #:cl #:alexandria #:cl-annot.class)
+  (:use #:cl #:alexandria)
   ;; these names should be from alexandria rather than lispworks
   (:shadowing-import-from #:alexandria if-let removef when-let* appendf copy-file with-unique-names nconcf when-let)
   (:nicknames #:settings)
-  (:add-use-defaults t))
-
+  (:add-use-defaults t)
+  (:export
+   settings
+   company
+   application-name
+   application-version
+   product
+   get-value
+   set-value))
 
 (in-package #:mediaimport.settings)
-(annot:enable-annot-syntax)
 
 
-@export-class
 (defclass settings ()
   ((company :reader company
             :initarg :company
@@ -49,7 +54,6 @@
           (setf (sys:product-registry-path company-symbol) (list name version)))))
 
 
-@export
 (defmethod get-value ((self settings) key &optional fallback-value)
   "Get the value identified by KEY from the storage SELF.
 If FALLBACK-VALUE specified, use this if not found (and update the storage)"
@@ -64,8 +68,6 @@ If FALLBACK-VALUE specified, use this if not found (and update the storage)"
             (t (values nil nil))))))
 
 
-
-@export
 (defmethod set-value ((self settings) key value)
   "Set and save the VALUE identified by the KEY in storage SELF."
   (with-slots (company-symbol settings-path) self

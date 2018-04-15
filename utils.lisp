@@ -1,10 +1,26 @@
 ;;;; utils.lisp
 (defpackage #:mediaimport.utils
   (:documentation "Utility functions used in all packages")
-  (:use #:cl #:cl-annot.class #:alexandria))
+  (:use #:cl #:alexandria)
+  (:export
+   from
+   interleave
+   partition
+   file-size
+   read-header
+   directory-exists-p
+   ;; duplicate-finder class
+   duplicate-finder
+   duplicate-p
+   ;; other
+   wildcard-to-regex
+   format-string
+   mappings-in-format-string
+   define-resource
+   push-top))
 
+   
 (in-package #:mediaimport.utils)
-(annot:enable-annot-syntax)
 
 
 (define-constant +regex-escape-chars+
@@ -27,7 +43,6 @@
   :test #'equal
   :documentation "List of special characters to be escaped in file mask")
 
-@export
 (defmacro from (package import name &rest others)
   "Import symbol(s) NAME ... from the package PACKAGE.
 Examples:
@@ -54,7 +69,6 @@ In the last example imports all the exported symbols from the package given."
                      `(shadowing-import ,(list 'quote import-symbol))))
                  symbols)))))
 
-@export
 (defun interleave (list1 list2)
   "Interleaves 2 lists.
 Example:
@@ -69,7 +83,6 @@ Example:
     result))
 
 
-@export
 (defun partition (seq predicate)
   "Split the SEQ of type list by PREDICATE, returning the VALUES,
 where 1st value is the list of elements for which PREDICATE is true,
@@ -79,14 +92,12 @@ and 2nd is the list of elements for which PREDICATE is false."
     (values pos neg)))
 
 
-@export
 (defun file-size (filename)
   "Return the size of the file with the name FILENAME in bytes"
   (with-open-file (in filename :element-type '(unsigned-byte 8))
     (file-length in)))
 
 
-@export
 (defun read-header (filename size)
   "Read SIZE bytes from the file FILENAME. If the file size is less than SIZE,
 read up to the size of file"
@@ -98,7 +109,6 @@ read up to the size of file"
         buffer))))
 
 
-@export
 (defun directory-exists-p (dirname)
   "Return T if DIRNAME specifies an existing directory.
 Suppress all errors and returns NIL otherwise"
@@ -107,7 +117,6 @@ Suppress all errors and returns NIL otherwise"
     (error (err) nil)))
 
 
-@export
 (defclass duplicate-finder () ((items :initarg :items)
                                (key :initarg :key :initform #'identity)
                                (nonuniques-table :initform
@@ -130,7 +139,6 @@ occurences of items in the array/list"
           items)))
    
 
-@export
 (defmethod duplicate-p ((self duplicate-finder) arg)
   "Returns t if the ARG was encountered more than once"
   (with-slots (nonuniques-table) self
@@ -139,7 +147,6 @@ occurences of items in the array/list"
       (values (if (not result) nil (> value 1)) result))))
 
 
-@export
 (defun wildcard-to-regex (wildcard &key case-sensitive-p)
   "Convert file wildcards to regular expressions. By default the regular
 expression is case insensitive. This is regulated by keyword argument
@@ -180,7 +187,6 @@ Example:
         regex)))
 
 
-@export
 (defun format-string (pattern object mappings)
   "Creates a formatted string from given PATTERN, OBJECT and MAPPINGS.
 Here the PATTERN is any string containing formatting arguments.
@@ -206,7 +212,6 @@ the value received from OBJECT by calling a getter."
     (apply (curry #'format nil new-format-string) (nreverse result-list))))
   
 
-@export
 (defun mappings-in-format-string (pattern mappings)
   "Returns a list of mappings from MAPPINGS hash table found in string PATTERN"
   (let* ((regex
@@ -215,7 +220,7 @@ the value received from OBJECT by calling a getter."
          (matches (ppcre:all-matches-as-strings regex pattern)))
     matches))
 
-@export
+
 (defmacro define-resource (name &body string-list)
   "Helper to declare and export constant with a given prefix.
 NAME is a prefix,
@@ -248,7 +253,6 @@ and the constants will be accessible like string.to etc.
                       (defparameter ,res-name ,(cdr string-item)))))
                string-list)))
 
-@export
 (defun push-top (elt lst &key (test #'eql))
   "Destructively push the element ELT to the top of the list LST, removing all
 elements ELT in the LST, keeping the topmost element unique.

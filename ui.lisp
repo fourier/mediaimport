@@ -9,10 +9,10 @@
         #:mediaimport.settings)
   ;; these names should be from alexandria rather than lispworks
   (:shadowing-import-from #:alexandria if-let removef when-let* appendf copy-file with-unique-names nconcf when-let)
-  (:add-use-defaults t))
+  (:add-use-defaults t)
+  (:export main))
 
 (in-package #:mediaimport.ui)
-(annot:enable-annot-syntax)
 
 
 (defconstant +proposal-table-sorting-types+
@@ -730,7 +730,7 @@ symbols in *settings-checkboxes*"
 ;;----------------------------------------------------------------------------
 ;; The application entry point
 ;;----------------------------------------------------------------------------
-@export
+
 (defun main ()
   (init)
   #+cocoa
