@@ -1,50 +1,34 @@
 ;;;; renamer.lisp
-
 (defpackage #:mediaimport.renamer
   (:documentation "Application logic related to searching and renaming")
   (:use #:cl #:cl-annot.class #:alexandria
-   #:mediaimport.utils #:mediaimport.datetime #:mediaimport.strings))
+        #:mediaimport.utils #:mediaimport.datetime #:mediaimport.strings)
+  (:export
+   file-candidate-target
+   validate-command-string
+   init
+   file-candidate-comment
+   create-list-of-candidates
+   renamer
+   file-candidate-source
+   apply-command-to-files
+   file-candidate
+   file-candidate-timestamp
+   copy-files))
 
 (in-package #:mediaimport.renamer)
-(annot:enable-annot-syntax)
 
-
-(define-constant +timestamp-format-mapping+
-    (let ((ht (make-hash-table :test #'equalp)))
-      (setf (gethash "{YYYY}" ht)
-            (cons "~4,'0d" #'datetime-year)
-            (gethash "{MM}" ht)
-            (cons "~2,'0d" #'datetime-month)
-            (gethash "{MONTH}" ht)
-            (cons "~a" #'datetime-string-month)
-            (gethash "{MON}" ht)
-            (cons "~a" (lambda (x) (datetime-string-month x :short t)))
-            (gethash "{МЕСЯЦ}" ht)
-            (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
-            (gethash "{МЕС}" ht)
-            (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
-            (gethash "{DD}" ht)
-            (cons "~2,'0d" #'datetime-date)
-            (gethash "{hh}" ht)
-            (cons "~2,'0d" #'datetime-hour)
-            (gethash "{mm}" ht)
-            (cons "~2,'0d" #'datetime-minute)
-            (gethash "{ss}" ht)
-            (cons "~2,'0d" #'datetime-second))
-      ht)
-  :test #'equalp
-  :documentation
+(defvar +timestamp-format-mapping+
+  (make-hash-table :test #'equal)
   "Hash table containing mapping between timestamp pseudo-formatting
 and (FORMAT formatting + getter function)")
 
-(define-constant +command-format-mapping+
-    (make-hash-table :test #'equalp)
-  :test #'equalp  
-  :documentation "Hash table containing mapping between command pseudo-formatting
+(defvar +command-format-mapping+
+  (make-hash-table :test #'equal)
+  "Hash table containing mapping between command pseudo-formatting
 and (FORMAT formatting + getter function")
 
 
-@export-class
 (defclass file-candidate ()
   ((source :accessor file-candidate-source :initarg :source
            :documentation "Source file (file to copy)")
@@ -66,36 +50,39 @@ the input and output file name as well as the source file timestamp"))
 
 
 ;; fill the +timestamp-format-mapping+ and +command-format-mapping+
-;; (eval-when (:compile-toplevel :load-toplevel)
-;;   (setf (gethash "{YYYY}" +timestamp-format-mapping+)
-;;         (cons "~4,'0d" #'datetime-year)
-;;         (gethash "{MM}" +timestamp-format-mapping+)
-;;         (cons "~2,'0d" #'datetime-month)
-;;         (gethash "{MONTH}" +timestamp-format-mapping+)
-;;         (cons "~a" #'datetime-string-month)
-;;         (gethash "{MON}" +timestamp-format-mapping+)
-;;         (cons "~a" (lambda (x) (datetime-string-month x :short t)))
-;;         (gethash "{МЕСЯЦ}" +timestamp-format-mapping+)
-;;         (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
-;;         (gethash "{МЕС}" +timestamp-format-mapping+)
-;;         (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
-;;         (gethash "{DD}" +timestamp-format-mapping+)
-;;         (cons "~2,'0d" #'datetime-date)
-;;         (gethash "{hh}" +timestamp-format-mapping+)
-;;         (cons "~2,'0d" #'datetime-hour)
-;;         (gethash "{mm}" +timestamp-format-mapping+)
-;;         (cons "~2,'0d" #'datetime-minute)
-;;         (gethash "{ss}" +timestamp-format-mapping+)
-;;         (cons "~2,'0d" #'datetime-second))
-;;   (setf (gethash "{SOURCE}" +command-format-mapping+)
-;;         (cons "~s" (compose #'namestring #'file-candidate-source))
-;;         (gethash "{TARGET}" +command-format-mapping+)
-;;         (cons "~s" (compose #'namestring #'file-candidate-target))))
+;;(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setf +timestamp-format-mapping+
+        (clrhash +timestamp-format-mapping+))
+  (setf (gethash "{YYYY}" +timestamp-format-mapping+)
+        (cons "~4,'0d" #'datetime-year)
+        (gethash "{MM}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-month)
+        (gethash "{MONTH}" +timestamp-format-mapping+)
+        (cons "~a" #'datetime-string-month)
+        (gethash "{MON}" +timestamp-format-mapping+)
+        (cons "~a" (lambda (x) (datetime-string-month x :short t)))
+        (gethash "{МЕСЯЦ}" +timestamp-format-mapping+)
+        (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
+        (gethash "{МЕС}" +timestamp-format-mapping+)
+        (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
+        (gethash "{DD}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-date)
+        (gethash "{hh}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-hour)
+        (gethash "{mm}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-minute)
+        (gethash "{ss}" +timestamp-format-mapping+)
+        (cons "~2,'0d" #'datetime-second))
+  (setf +command-format-mapping+
+        (clrhash +command-format-mapping+))
+  (setf (gethash "{SOURCE}" +command-format-mapping+)
+        (cons "~s" (compose #'namestring #'file-candidate-source))
+        (gethash "{TARGET}" +command-format-mapping+)
+        (cons "~s" (compose #'namestring #'file-candidate-target)));)
         
 
 
 
-@export
 (defclass renamer () ((source-path :initarg :source-path
                                    :documentation "Source directory to copy files from")
                       (destination-path :initarg :destination-path
@@ -128,7 +115,7 @@ of candidates for copy/process"))
                                  #'ppcre:create-scanner
                                  #'wildcard-to-regex
                                  (curry #'string-trim " "))
-                                (lw:split-sequence "," filemasks))))))
+                                (split-sequence:split-sequence #\, filemasks))))))
 
 
 (defun format-timestamp-string (pattern ts)
@@ -415,7 +402,6 @@ all of them"
   candidates)
 
 
-@export
 (defmethod create-list-of-candidates ((self renamer) &key total-fun progress-fun)
   "Creates a final list of candidates. The main function of the renamer class,
 its external interface.
@@ -459,16 +445,15 @@ this table first and add if not found"
            (equalp cs1 cs2)))))
 
 
-(defun copy-file (from to)
+(defun ensure-copy-file (from to)
   "Copy file FROM to the file TO overwriting it if exists"
   #-:lispworks
-  (fad:copy-file from to :overwrite t)
+  (alexandria:copy-file from to)
   ;; only starting from 6.1
   #+:lispworks
   (lw:copy-file from to))
 
 
-@export
 (defun copy-files (file-candidates &key callback delete-original)
   "Copy files from array FILE-CANDIDATES of type file-candidate.
 CALLBACK could be nil; if not nil, CALLBACK is a function which
@@ -491,7 +476,7 @@ DELETE-ORIGINAL if t remove the original file"
                  (handler-case
                      (progn
                        (ensure-directories-exist (fad:pathname-directory-pathname to))
-                       (copy-file from to)
+                       (ensure-copy-file from to)
                        nil)
                    (error (err)
                      (format nil "~a" err))))))
@@ -514,7 +499,6 @@ Example:
   (format-string pattern cand +command-format-mapping+))
 
 
-@export
 (defun validate-command-string (pattern)
   "Validate the PATTERN for command to be applied to file candidates.
 Will return VALUES (result, error-text), where RESULT is t if the
@@ -524,7 +508,6 @@ Will return VALUES (result, error-text), where RESULT is t if the
         (values nil string.source-not-provided)
         t)))
 
-@export
 (defun apply-command-to-files (file-candidates command-pattern
                                                &key
                                                callback stream script delete-original)
@@ -546,7 +529,12 @@ DELETE-ORIGINAL if t remove the original file"
        (when (and stream (file-candidate-target cand))
          (setf command (format-command-string command-pattern cand)
                result (if (not script)
-                          (system:call-system-showing-output
+                          #-:lispworks
+                          (asdf/driver:run-program
+                           command
+                           :output stream)
+                           #+:lispworks
+                           (system:call-system-showing-output
                            command
                            :output-stream stream
                            :prefix "")
@@ -561,7 +549,6 @@ DELETE-ORIGINAL if t remove the original file"
 
   
 
-@export
 (defun init()
   "Platform-dependent initialization"
   #+sbcl
