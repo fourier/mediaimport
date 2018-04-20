@@ -12,11 +12,17 @@
                #:split-sequence
                #:zpb-exif)
   :serial t
-  :components (#+lispworks(:file "settings")
-               (:file "version")
-               (:file "utils")
-               (:file "strings")
-               (:file "datetime")
-               (:file "renamer")
-               #+lispworks(:file "ui")))
+  :components ((:module "src"
+                :serial t
+                :components
+                (#+lispworks(:file "settings")
+                  (:file "version")
+                  (:file "utils")
+                  (:file "strings")
+                  (:file "datetime")
+                  (:file "renamer")
+                  #+lispworks(:file "ui"))))
+  ;;:in-order-to ((test-op (test-op mediaimport-test)))
+  )
+  
 
