@@ -22,7 +22,6 @@
                   (:file "datetime")
                   (:file "renamer")
                   #+lispworks(:file "ui"))))
-  ;;:in-order-to ((test-op (test-op mediaimport-test)))
-  )
+  :in-order-to ((test-op (test-op mediaimport-test))))
   
 
