@@ -275,7 +275,8 @@
 
 (defclass file-candidate-item (file-candidate)
   ((color :accessor file-candidate-color :initarg :color :initform :black)
-   (status :accessor file-candidate-status :initform nil)))
+   (status :accessor file-candidate-status :initform nil)
+   (comment :accessor file-candidate-comment :initform "" :initarg :comment)))
 
 
 (defmethod update-candidate-status ((self file-candidate-item))
