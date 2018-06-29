@@ -215,7 +215,7 @@ Examples:
 
 => (bump-file-name \"myfile-10.txt\" 100)
 #P\"myfile-100.txt\""
-  (let* ((dir (pathname-directory filename)) ; directory
+  (let* ((dir (ppath:dirname (namestring filename))) ; directory
          (basename (pathname-name filename)) ; filename w/o extension
          (ext (pathname-type filename))      ; extension
          ;; possible numeric trailer like for "img10-1.jpg" it will be "1"
@@ -233,7 +233,7 @@ Examples:
          (new-name (if trailer
                        (ppcre:regex-replace "-(\\d+$)" basename new-trailer)
                        (concatenate 'string basename new-trailer))))
-    (make-pathname :directory dir :name new-name :type ext)))
+    (pathname (ppath:join dir (concatenate 'string new-name "." ext)))))
 
 
 (defun get-maximum-file-version (filenames)
