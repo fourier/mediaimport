@@ -106,8 +106,8 @@ of candidates for copy/process"))
   "Constructor for RENAMER class"
   (with-slots (source-path destination-path filemasks) self
     ;; process paths
-    (setf source-path (truename source-path))
-    (setf destination-path (truename destination-path))
+    (setf source-path (ppath:abspath (ppath:expanduser source-path)))
+    (setf destination-path (ppath:abspath (ppath:expanduser destination-path)))
     ;; process filemasks
     (if (and filemasks (= (length filemasks) 0))
         (setf filemasks nil)
