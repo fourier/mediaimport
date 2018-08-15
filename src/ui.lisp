@@ -38,15 +38,11 @@
     (:use-custom-command . ,string.use-custom-command)
     (:move-instead-of-copy . ,string.move-instead-of-copy))
   "Data for the settings checkboxes - symbol to string mapping")
-  
 
 ;;----------------------------------------------------------------------------
-;; The application interface
+;; Main Window/application base interface
 ;;----------------------------------------------------------------------------
-
-(define-interface cocoa-application-interface (#+:cocoa cocoa-default-application-interface)
-  ((main-window :initform nil
-                :accessor main-window))
+(define-interface main-window-base () ()
   (:menus
    (application-menu
     string.application-name
@@ -64,11 +60,13 @@
         :callback 'show-preferences-window
         :callback-type :none)))
 |#     
+     #+cocoa
      (:component
       ()
       ;; This is a special named component where the CAPI will
       ;; attach the standard Services menu.
       :name :application-services)
+     #+cocoa
      (:component
       ((string.hide-media-import
         :accelerator "accelerator-h"
@@ -84,31 +82,16 @@
       ((string.quit
         :accelerator "accelerator-q"
         :callback 'destroy
-        :callback-type :interface)))))
-   (edit-menu
-    string.edit
-    ((:component
-      ((string.undo
-        :enabled-function 'active-pane-undo-p
-        :callback 'active-pane-undo
-        :callback-type :none)))
-     (:component     
-      ((string.cut
-        :enabled-function 'active-pane-cut-p
-        :callback 'active-pane-cut
-        :callback-type :none)
-       (string.copy
-        :enabled-function 'active-pane-copy-p
-        :callback 'active-pane-copy
-        :callback-type :none)
-       (string.paste
-        :enabled-function 'active-pane-paste-p
-        :callback 'active-pane-paste
-        :callback-type :none)
-       (string.select-all
-        :enabled-function 'active-pane-select-all-p
-        :callback 'active-pane-select-all
-        :callback-type :none))))))
+        :callback-type :interface)))))))
+
+;;----------------------------------------------------------------------------
+;; The application interface
+;;----------------------------------------------------------------------------
+
+(define-interface cocoa-application-interface (#+:cocoa cocoa-default-application-interface
+                                                        main-window-base)
+  ((main-window :initform nil
+                :accessor main-window))
   (:menu-bar application-menu edit-menu)
   (:default-initargs
    :title string.application-name
@@ -131,7 +114,7 @@
 ;;----------------------------------------------------------------------------
 ;; The main window interface
 ;;----------------------------------------------------------------------------
-(define-interface main-window ()
+(define-interface main-window (main-window-base)
   ;; slots
   ((application-interface :initarg :application-interface)
    (duplicates :initform nil)
@@ -239,6 +222,8 @@
                 :adjust :center
                 :y-ratios '(nil nil nil nil 1 nil nil)))
   ;; all other properties
+  (:menu-bar application-menu)
+
   (:default-initargs
    :title string.application-name
    :visible-min-width 800
@@ -726,6 +711,10 @@ symbols in *settings-checkboxes*"
 (defmethod on-clear-history-button ((self cocoa-application-interface))
   "Clear History menu item handler"
   (clear-history (main-window self)))
+
+(defmethod on-clear-history-button ((self main-window))
+  "Clear History menu item handler"
+  (clear-history self))
 
 
 ;;----------------------------------------------------------------------------
