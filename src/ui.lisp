@@ -220,6 +220,7 @@
                                 copy-button
                                 progress-layout)
                 :adjust :center
+                :internal-border 10
                 :y-ratios '(nil nil nil nil 1 nil nil)))
   ;; all other properties
   (:menu-bar application-menu)
