@@ -36,7 +36,8 @@
   `((:use-exif . ,string.use-exif)
     (:search-in-subdirs . ,string.search-in-subdirs)
     (:use-custom-command . ,string.use-custom-command)
-    (:move-instead-of-copy . ,string.move-instead-of-copy))
+    (:move-instead-of-copy . ,string.move-instead-of-copy)
+    (:ignore-crc . ,string.ignore-crc))
   "Data for the settings checkboxes - symbol to string mapping")
 
 ;;----------------------------------------------------------------------------
@@ -223,7 +224,7 @@
                 :internal-border 10
                 :y-ratios '(nil nil nil nil 1 nil nil)))
   ;; all other properties
-  (:menu-bar application-menu)
+  #-cocoa (:menu-bar application-menu)
 
   (:default-initargs
    :title string.application-name

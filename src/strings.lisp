@@ -100,4 +100,5 @@ Possible templates:
   (move-instead-of-copy . "Delete original file")
   (delete-original-confirmation . "Original files will be removed. Proceed?")
   (settings . "Settings")
+  (ignore-crc . "Don't compare CRC")
   )
