@@ -404,6 +404,7 @@
                                         :pattern pattern-text
                                         :filemasks masks
                                         :use-exif (setting-selected self :use-exif)
+                                        :ignore-crc (setting-selected self :ignore-crc)
                                         :recursive (setting-selected self :search-in-subdirs))))
                  ;; save the edit fields to the history
                  (save-edit-controls-history self)
