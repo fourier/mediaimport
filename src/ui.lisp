@@ -36,8 +36,7 @@
   `((:use-exif . ,string.use-exif)
     (:search-in-subdirs . ,string.search-in-subdirs)
     (:use-custom-command . ,string.use-custom-command)
-    (:move-instead-of-copy . ,string.move-instead-of-copy)
-    (:ignore-crc . ,string.ignore-crc))
+    (:move-instead-of-copy . ,string.move-instead-of-copy))
   "Data for the settings checkboxes - symbol to string mapping")
 
 ;;----------------------------------------------------------------------------
@@ -170,7 +169,17 @@
                    :retract-callback 'on-settings-checkbox-retracted
                    :layout-class 'grid-layout
                    :layout-args '(:columns 2))
-
+   (comparison-options-panel radio-button-panel
+                 :title "Comparison options"
+                 :title-position :frame
+                 :visible-max-width nil
+                 :visible-max-height nil
+                 :items (list (cons string.crc-comparison  :crc)
+                              (cons string.binary-comparison :binary)
+                              (cons string.quick-comparison :quick))
+                 :print-function #'car
+                 :layout-class 'capi:row-layout
+                 :layout-args '(:uniform-size-p t :x-adjust (:left :center :right)))
    
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
@@ -215,14 +224,15 @@
     
    (main-layout column-layout '(input-output-layout
                                 options-layout
-                                command-layout 
+                                comparison-options-panel
+                                command-layout
                                 collect-button
                                 proposal-and-output-layout
                                 copy-button
                                 progress-layout)
                 :adjust :center
                 :internal-border 10
-                :y-ratios '(nil nil nil nil 1 nil nil)))
+                :y-ratios '(nil nil nil nil nil 1 nil nil)))
   ;; all other properties
   #-cocoa (:menu-bar application-menu)
 
@@ -381,6 +391,7 @@
   (with-slots (input-directory-edit
                output-directory-edit
                input-filemasks-edit
+               comparison-options-panel
                pattern-edit) self
     (let ((source-path (text-input-pane-text input-directory-edit))
           (dest-path (text-input-pane-text output-directory-edit)))
@@ -398,13 +409,14 @@
               ((not (equalp (truename source-path) (truename dest-path)))
                (let* ((masks (text-input-pane-text input-filemasks-edit))
                       (pattern-text (text-input-pane-text pattern-edit))
+                      (comparison-type (cdr (choice-selected-item comparison-options-panel)))
                       (r (make-instance 'renamer
                                         :source-path source-path
                                         :destination-path dest-path
                                         :pattern pattern-text
                                         :filemasks masks
                                         :use-exif (setting-selected self :use-exif)
-                                        :ignore-crc (setting-selected self :ignore-crc)
+                                        :comparison-type comparison-type
                                         :recursive (setting-selected self :search-in-subdirs))))
                  ;; save the edit fields to the history
                  (save-edit-controls-history self)

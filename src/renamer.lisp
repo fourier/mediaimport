@@ -95,8 +95,8 @@ the input and output file name as well as the source file timestamp"))
                                 :documentation "Boolean flag specifying if we need to try to extract information from EXIF. It takes little longer and not needed for example for movies")
                       (recursive :initform nil :initarg :recursive
                                  :documentation "Boolean flag specifying if we need to descend to subdirectories to collect list of files")
-                      (ignore-crc :initform nil :initarg :ignore-crc
-                               :documentation "Boolean flag specifying if we need to compare SHA-1 codes of the files then doing comparisons")
+                      (comparison-type :initform :crc :initarg :comparison-type
+                                       :documentation "Flag specifying comparison type. Options: crc, binary or quick")
                       (checksums :initform (make-hash-table :test #'equal)
                                  :documentation "Cache of calculated checksums"))
   (:documentation "Renamer class encapsulates all the necessary information
@@ -345,7 +345,7 @@ If existing files are in place AND are the same, set the candidate name as nil.
 Otherwise try to bump the file name until no file with the same name exists.
 After this operation CANDIDATES will contain targets either nil or non-existing
 file names."
-  (with-slots (checksums ignore-crc) self
+  (with-slots (checksums comparison-type) self
     (let ((progress 0))
       ;; 1. Remove those candidates for which the target is already exists and
       ;;    the same
@@ -359,7 +359,7 @@ file names."
                                                    (file-candidate-source cand)
                                                    x
                                                    :checksum-hash checksums
-                                                   :ignore-crc ignore-crc) x))
+                                                   :comparison-type comparison-type) x))
                                  similar))
                 ;; found, clean the target and set appropriate comment
                 (setf (file-candidate-target cand) nil
@@ -423,7 +423,7 @@ to the value received in TOTAL-FUN."
                              (verify-against-existing self candidates :progress-fun progress-fun))))
 
 
-(defun check-if-equal (filename1 filename2 &key checksum-hash ignore-crc)
+(defun check-if-equal (filename1 filename2 &key checksum-hash comparison-type)
   "Test if 2 files are equal.
 1. First verify their sizes;
 2. If sizes are the same, verify first 8kb of contents
