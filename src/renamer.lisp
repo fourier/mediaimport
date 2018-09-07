@@ -29,6 +29,9 @@ and (FORMAT formatting + getter function)")
 and (FORMAT formatting + getter function")
 
 
+(defparameter +file-block-size+ 4096
+  "The block size to read from the file")
+
 (defclass file-candidate ()
   ((source :accessor file-candidate-source :initarg :source
            :documentation "Source file (file to copy)")
@@ -438,13 +441,45 @@ this table first and add if not found"
                        (ironclad:digest-file :sha1 fname))))))
     ;; first check file sizes
     (and (= (file-size filename1) (file-size filename2))
-         ;; next check first 8k
-         (equalp (read-header filename1 8192)
-                 (read-header filename2 8192))
-         ;; and after that we have to check checksum
-         (let ((cs1 (get-and-cache-checksum filename1))
-               (cs2 (get-and-cache-checksum filename1)))
-           (equalp cs1 cs2)))))
+         ;; next check first 4k
+         (equalp (read-header filename1 +file-block-size+)
+                 (read-header filename2 +file-block-size+))
+         (case comparison-type
+           (:quick t)
+           (:crc 
+            ;; we have to check checksum
+            (let ((cs1 (get-and-cache-checksum filename1))
+                  (cs2 (get-and-cache-checksum filename1)))
+              (equalp cs1 cs2)))
+           (:binary
+            (compare-files-binary filename1 filename2))))))
+
+
+(defun compare-files-binary (filename1 filename2)
+  "Compare files byte-by-byte. Assumption: files shall be of the same length"
+  (let ((elt-type '(unsigned-byte 8)))
+    (with-open-file (in1 filename1 :element-type elt-type)
+      (with-open-file (in2 filename2 :element-type elt-type)
+        (let ((fsize1 (file-length in1))
+              (fsize2 (file-length in2)))
+          (assert (= fsize1 fsize2))
+          (and 
+           (loop with num-blocks = (floor (/ fsize1 +file-block-size+))
+                 with buffer1 = (make-array +file-block-size+ :element-type elt-type)
+                 with buffer2 = (make-array +file-block-size+ :element-type elt-type)
+                 for i below num-blocks
+                 do
+                 (read-sequence buffer1 in1)
+                 (read-sequence buffer2 in2)
+                 always (equalp buffer1 buffer2))
+           (let* ((rest-size (rem fsize1 +file-block-size+))
+                  (rest-buffer1 (when (> rest-size 0)
+                                  (make-array rest-size :element-type elt-type)))
+                  (rest-buffer2 (when (> rest-size 0)
+                                  (make-array rest-size :element-type elt-type))))
+             (read-sequence rest-buffer1 in1)
+             (read-sequence rest-buffer2 in2)
+             (equalp rest-buffer1 rest-buffer2))))))))
 
 
 (defun ensure-copy-file (from to)
