@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/fourier/mediaimport.svg?branch=master)](https://travis-ci.org/fourier/mediaimport)
 # Media Import
-Media Import is a simple OSX utility for copying images(and other files) according to their timestamps. It is implemented with LispWorks 7.0 for OSX.
+Media Import is a simple Win32/OSX utility for copying images(and other files) according to their timestamps. It is implemented with LispWorks 7.1 32bit for OSX and Windows.
 ![example](https://github.com/fourier/mediaimport/raw/screenshots/screenshot1.png "Example")
 
 ## Features
