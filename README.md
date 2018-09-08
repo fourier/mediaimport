@@ -2,6 +2,7 @@
 # Media Import
 Media Import is a simple Win32/OSX utility for copying images(and other files) according to their timestamps. It is implemented with LispWorks 7.1 32bit for OSX and Windows.
 ![example](https://github.com/fourier/mediaimport/raw/screenshots/screenshot1.png "Example")
+![example-win32](https://github.com/fourier/mediaimport/raw/screenshots/screenshot-win.png "Window screenshot")
 
 ## Features
 - It verifies if there are already files with the suggested names, and if there are, skip if they are identical or suggest another name;
