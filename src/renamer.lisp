@@ -499,9 +499,6 @@ CALLBACK is a function of 2 arguments: index of the element in the
 FILE-CANDIDATES array and a string error-text if an error happened.
 In case of success 2nd argument is nil.
 DELETE-ORIGINAL if t remove the original file"
-  ;;
-  ;; error occured while copying
-  ;; CONDITIONS:FILE-STREAM-ERROR occured, arguments : (:ERRNO 57 :READ "copying to" :STREAM #P"/Volumes/storage-1/Media/Photo Archive/Mobile photos Alexey/2015-07-11/Video-15_56.MOV")
   (map-iota
    (lambda (i)
      (let* ((cand (aref file-candidates i))

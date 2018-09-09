@@ -632,8 +632,6 @@ background operations happened"
 
 (defmethod on-settings-checkbox-selected (data (self main-window))
   "Callback called when selected one of settings checkboxes"
-  (print "on-settings-checkbox-selected")
-  (print data)
   (case (car data)
     (:use-custom-command
      (toggle-custom-command self t))
@@ -642,8 +640,6 @@ background operations happened"
 
 (defmethod on-settings-checkbox-retracted (data (self main-window))
   "Callback called when retracted selection of settings checkboxes"
-  (print "on-settings-checkbox-retracted")
-  (print data)
   (case (car data)
     (:use-custom-command
      (toggle-custom-command self nil))
@@ -715,7 +711,6 @@ symbols in *settings-checkboxes*"
                              :pane-args
                              '(:layout-class column-layout))))
       (when clear-from
-        (print clear-from)
         ;; for every edit selected set nil corresponding setting
         (mapc (lambda (edit)
                 (set-value settings (symbol-name edit) nil))
