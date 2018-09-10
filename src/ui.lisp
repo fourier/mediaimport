@@ -159,7 +159,6 @@
                  :callback 'on-collect-button
                  :text-change-callback 'on-command-edit-changed)
    (save-script-button push-button :text string.save-script :callback 'on-save-script-button)
-   (collect-button push-button :text string.collect-data :callback 'on-collect-button)
    (settings-panel check-button-panel
                    :visible-max-width nil
                    :visible-max-height nil
@@ -170,7 +169,7 @@
                    :layout-class 'grid-layout
                    :layout-args '(:columns 2))
    (comparison-options-panel radio-button-panel
-                 :title "Comparison options"
+                 :title string.comparison-options
                  :title-position :frame
                  :visible-max-width nil
                  :visible-max-height nil
@@ -180,7 +179,8 @@
                  :print-function #'car
                  :layout-class 'capi:row-layout
                  :layout-args '(:uniform-size-p t :x-adjust (:left :center :right)))
-   
+   (save-preset-button push-button :text string.save-preset :callback 'on-save-preset-button)
+   (manage-presets-button push-button :text string.manage-presets :callback 'on-manage-presets-button)
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
                    :visible-min-height '(:character 10)
@@ -202,6 +202,7 @@
                                :adjust :left 
                                :visible-min-width (:character 45))))
    (output-edit collector-pane :buffer-name "Output buffer")
+   (collect-button push-button :text string.collect-data :callback 'on-collect-button)
    (copy-button push-button :text string.copy-button :callback 'on-copy-button)
    (progress-bar progress-bar))
   (:layouts
@@ -212,6 +213,10 @@
                    :x-ratios '(1 nil)
                    :title string.settings
                    :title-position :frame)
+   (presets-layout row-layout '(save-preset-button manage-presets-button)
+                   :title string.presets
+                   :title-position :frame)
+   (option-and-presets-layout row-layout '(comparison-options-panel presets-layout))
    (command-layout row-layout '(command-edit save-script-button)
                    :adjust :center
                    :x-ratios '(1 nil))
@@ -221,18 +226,17 @@
                                :items (list (list string.files-pane 'proposal-table)
                                             (list string.output-pane 'output-edit)))
    (progress-layout switchable-layout '(nil progress-bar))
-    
+   (action-buttons-layout row-layout '(collect-button copy-button))
    (main-layout column-layout '(input-output-layout
                                 options-layout
-                                comparison-options-panel
+                                option-and-presets-layout
                                 command-layout
-                                collect-button
                                 proposal-and-output-layout
-                                copy-button
+                                action-buttons-layout
                                 progress-layout)
                 :adjust :center
                 :internal-border 10
-                :y-ratios '(nil nil nil nil nil 1 nil nil)))
+                :y-ratios '(nil nil nil nil 1 nil nil)))
   ;; all other properties
   #-cocoa (:menu-bar application-menu)
 
@@ -725,6 +729,56 @@ symbols in *settings-checkboxes*"
 (defmethod on-clear-history-button ((self main-window))
   "Clear History menu item handler"
   (clear-history self))
+
+
+(defun preset-name-dialog (suggested-name)
+  (multiple-value-bind (preset-name result)
+      (prompt-for-string string.preset-name :text suggested-name)
+    (when (and result (not (emptyp preset-name)))
+      preset-name)))
+
+(defmethod on-save-preset-button (data (self main-window))
+  "Save preset button handler"
+  (when-let (name (preset-name-dialog string.default-preset-name))
+    (display-message name)))
+
+(defmethod on-manage-presets-button (data (self main-window))
+  "Manage presets button handler"
+  (display (make-instance 'presets-window)))
+
+;;----------------------------------------------------------------------------
+;; Presets interface
+;;----------------------------------------------------------------------------
+
+(define-interface presets-window ()
+  ()
+  (:panes
+   (presets-list list-panel
+                 :visible-min-height '(character 2))
+   (load push-button 
+           :text "Load"
+           :selection-callback 'on-presets-delete-preset)
+   (delete push-button 
+           :text "Delete..."
+           :selection-callback 'on-presets-delete-preset)
+   (rename push-button
+           :text "Rename..."
+           :selection-callback 'on-presets-rename-preset)
+   (ok push-button
+       :text "Ok"
+       :selection-callback 'on-presets-rename-preset))
+  (:layouts
+   (buttons-layout column-layout
+                   '(load delete rename))
+   (main-layout row-layout
+                '(presets-list buttons-layout)
+                :internal-border 10))
+  (:default-initargs :title "Presets" :layout 'main-layout))
+
+
+(defmethod initialize-instance :after ((self presets-window) &key &allow-other-keys)
+  "Constructor for the presets-window class"
+  )
 
 
 ;;----------------------------------------------------------------------------
