@@ -754,10 +754,11 @@ symbols in *settings-checkboxes*"
   ()
   (:panes
    (presets-list list-panel
-                 :visible-min-height '(character 2))
+                 :visible-min-height '(character 4)
+                 :visible-min-width '(character 20))
    (load push-button 
            :text "Load"
-           :selection-callback 'on-presets-delete-preset)
+           :selection-callback 'on-presets-load-preset)
    (delete push-button 
            :text "Delete..."
            :selection-callback 'on-presets-delete-preset)

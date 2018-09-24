@@ -32,10 +32,12 @@
             :initarg :application-version
             :initform "1.0"
             :documentation "Application version")
-   (company-symbol :reader product
+   (product-symbol :reader product
     :documentation "A symbol produced from the company name")
-   (settings-path
-    :documentation "A path to use to access settings"))
+   (settings-path :reader settings
+                  :initform "Settings"
+                  :initarg :settings-path
+                  :documentation "A path to the generic application settings"))
   (:documentation "Settings class provides application-specific persistence settings"))
 
 (defmethod print-object ((self settings) out)
@@ -48,31 +50,47 @@
 
 (defmethod initialize-instance :after ((self settings) &key)
   "Constructor for SETTINGS class"
-  (with-slots (company name version company-symbol settings-path) self
-    (setf company-symbol (intern (string-upcase company)))
-    (setf settings-path
-          (setf (sys:product-registry-path company-symbol) (list name version)))))
+  (with-slots (company name version product-symbol) self
+    (setf version (mediaimport.version:version-string))
+    (setf product-symbol (intern name "KEYWORD"))
+    (setf (sys:product-registry-path product-symbol)
+          (list "Software" company name version))))
 
 
 (defmethod get-value ((self settings) key &optional fallback-value)
   "Get the value identified by KEY from the storage SELF.
 If FALLBACK-VALUE specified, use this if not found (and update the storage)"
-  (with-slots (company-symbol settings-path) self
-    (multiple-value-bind (value result)
-        (user-preference settings-path key :product company-symbol)
-      (cond ((and result value) (values value result))
-            (fallback-value
-             (progn
-               (setf (user-preference settings-path key :product company-symbol) fallback-value)
-               (values (user-preference settings-path key :product company-symbol) t)))
-            (t (values nil nil))))))
+  (with-slots (product-symbol settings-path) self
+    ;; handle paths like "Presets/Mypreset"
+    (let ((path (split-sequence "/" key)))
+      ;; if single key prepend with "Settings"
+      (if (= 1 (length path))
+          (setf path (list settings-path))
+          ;; otherwise split the path and a key
+          (setf key (car (last path))
+                path (butlast path)))
+      (multiple-value-bind (value result)
+          (user-preference path key :product product-symbol)
+        (cond ((and result value) (values value result))
+              (fallback-value
+               (progn
+                 (setf (user-preference path key :product product-symbol) fallback-value)
+                 (values (user-preference path key :product product-symbol) t)))
+              (t (values nil nil)))))))
 
 
 (defmethod set-value ((self settings) key value)
   "Set and save the VALUE identified by the KEY in storage SELF."
-  (with-slots (company-symbol settings-path) self
-    (setf (user-preference settings-path key :product company-symbol) value)
-    value))
+  (with-slots (product-symbol settings-path) self
+    (let ((path (split-sequence "/" key)))
+      ;; if single key prepend with "Settings"
+      (if (= 1 (length path))
+          (setf path (list settings-path))
+          ;; otherwise split the path and a key
+          (setf key (car (last path))
+                path (butlast path)))
+      (setf (user-preference path key :product product-symbol) value)
+      value)))
 
 
 
