@@ -39,6 +39,13 @@
     (:move-instead-of-copy . ,string.move-instead-of-copy))
   "Data for the settings checkboxes - symbol to string mapping")
 
+
+(defparameter *comparison-options*
+  (list (cons string.crc-comparison  :crc)
+        (cons string.binary-comparison :binary)
+        (cons string.quick-comparison :quick))
+  "Data for the comparison options radio buttons")
+
 ;;----------------------------------------------------------------------------
 ;; Main Window/application base interface
 ;;----------------------------------------------------------------------------
@@ -173,9 +180,7 @@
                  :title-position :frame
                  :visible-max-width nil
                  :visible-max-height nil
-                 :items (list (cons string.crc-comparison  :crc)
-                              (cons string.binary-comparison :binary)
-                              (cons string.quick-comparison :quick))
+                 :items *comparison-options*
                  :print-function #'car
                  :layout-class 'capi:row-layout
                  :layout-args '(:uniform-size-p t :x-adjust (:left :center :right)))
