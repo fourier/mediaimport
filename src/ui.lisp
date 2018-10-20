@@ -10,10 +10,9 @@
   ;; these names should be from alexandria rather than lispworks
   (:shadowing-import-from #:alexandria if-let removef when-let* appendf copy-file with-unique-names nconcf when-let)
   (:add-use-defaults t)
-  (:export main))
+  (:export main-window #+cocoa cocoa-application-interface))
 
 (in-package #:mediaimport.ui)
-
 
 (defconstant +proposal-table-sorting-types+
   (list
@@ -786,21 +785,4 @@ symbols in *settings-checkboxes*"
   "Constructor for the presets-window class"
   )
 
-
-;;----------------------------------------------------------------------------
-;; The application entry point
-;;----------------------------------------------------------------------------
-
-(defun main ()
-  (init)
-  #+cocoa
-  (let ((application (make-instance 'cocoa-application-interface)))
-    (set-application-interface application)
-    (let ((main-window (make-instance 'main-window
-                                      :application-interface application)))
-      (setf (main-window application) main-window)
-      (display main-window)))
-  #+win32
-  (let ((interface (make-instance 'main-window :application-interface nil)))
-      (display interface)))
 

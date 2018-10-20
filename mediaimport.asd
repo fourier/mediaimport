@@ -21,7 +21,8 @@
                  (:file "strings")
                  (:file "datetime")
                  (:file "renamer")
-                 #+lispworks(:file "ui"))))
+                 #+lispworks(:file "ui")
+                 (:file "mediaimport"))))
   :in-order-to ((test-op (test-op mediaimport-test))))
   
 

@@ -6,7 +6,6 @@
   (:export
    file-candidate-target
    validate-command-string
-   init
    file-candidate-comment
    create-list-of-candidates
    renamer
@@ -580,16 +579,6 @@ DELETE-ORIGINAL if t remove the original file"
          (funcall callback i (when (/= 0 result)
                                (format nil string.failed-fmt command))))))
    (length file-candidates)))
-
-  
-
-(defun init()
-  "Platform-dependent initialization"
-  #+sbcl
-  (setf SB-ALIEN::*DEFAULT-C-STRING-EXTERNAL-FORMAT* :UTF-8)
-  #+lispworks
-  (lw:set-default-character-element-type 'lw:bmp-char))
-
 
 ;;; Tests
 ;; (in-package :mediaimport.renamer)

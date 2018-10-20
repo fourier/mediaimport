@@ -32,7 +32,7 @@
 #+cocoa
 (compile-file (sys:example-file "configuration/macos-application-bundle.lisp") :load t)
 
-(deliver 'mediaimport.ui:main
+(deliver 'mediaimport:main
          #+cocoa
          (create-macos-application-bundle
           "~/Sources/lisp/mediaimport/Media Import.app"
