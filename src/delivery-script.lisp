@@ -42,7 +42,7 @@
           :identifier "com.github.fourier.mediaimport")
          #+MSWINDOWS
          "C:/Sources/lisp/mediaimport/mediaimport.exe"
-         0
+         4
          :interface :capi
          :keep-symbols '(mediaimport.ui::geometry-settings) ;; why doesn't work ?
          :startup-bitmap-file nil)

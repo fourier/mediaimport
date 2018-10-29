@@ -709,21 +709,21 @@ symbols in *settings-checkboxes*"
 (defmethod clear-history ((self main-window))
   "Launch the Clear history dialog and clear history for selected edits."
   (with-slots (settings) self
-    (let ((clear-from
-           ;; list of edits - output from the dialog
-           (prompt-with-list (get-text-choice-panes self)
-                             string.clear-history-dialog-title
-                             :interaction :multiple-selection
-                             :choice-class 'button-panel
-                             :print-function (compose #'titled-object-title (curry #'slot-value self))
-                             :pane-args
-                             '(:layout-class column-layout))))
-      (when clear-from
-        ;; for every edit selected set nil corresponding setting
-        (mapc (lambda (edit)
-                (set-value settings (symbol-name edit) nil))
-              clear-from)
-        (restore-edit-controls-history self)))))
+    (when-let (clear-from
+               ;; list of edits - output from the dialog
+               (prompt-with-list (get-text-choice-panes self)
+                                 string.clear-history-dialog-title
+                                 :interaction :multiple-selection
+                                 :choice-class 'button-panel
+                                 :print-function
+                                 (compose #'titled-object-title (curry #'slot-value self))
+                                 :pane-args
+                                 '(:layout-class column-layout)))
+      ;; for every edit selected set nil corresponding setting
+      (mapc (lambda (edit)
+              (set-value settings (symbol-name edit) nil))
+            clear-from)
+      (restore-edit-controls-history self))))
 
 
 (defmethod on-clear-history-button ((self cocoa-application-interface))
