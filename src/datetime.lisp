@@ -56,12 +56,14 @@
 Example:
 => (make-datetime-from-string \"2011:01:02 13:28:33333\")
 #S(DATETIME :YEAR 2011 :MONTH 1 :DATE 2 :HOUR 13 :MINUTE 28 :SECOND 33333)"
-  (let ((parsed-numbers
-         (mapcar #'parse-integer (apply #'append
-                                        (mapcar (lambda (x)
-                                                  (split-sequence:split-sequence #\: x))
-                                                (split-sequence:split-sequence #\Space str))))))
-    (apply #'create-datetime parsed-numbers)))
+  (flet ((sep-p (c) (or (char= c #\-) (char= c #\:))))
+    (let ((parsed-numbers
+           (mapcar #'parse-integer
+                   (apply #'append
+                          (mapcar (lambda (x)
+                                    (split-sequence:split-sequence-if #'sep-p x))
+                                  (split-sequence:split-sequence #\Space str))))))
+      (apply #'create-datetime parsed-numbers))))
 
 
 (defun make-datetime-from-gps-timestamps (gds gts)
