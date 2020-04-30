@@ -29,6 +29,6 @@
                                       :application-interface application)))
       (setf (main-window application) main-window)
       (display main-window)))
-  #+win32
+  #+(or win32 linux)
   (let ((interface (make-instance 'main-window :application-interface nil)))
       (display interface)))
