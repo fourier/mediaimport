@@ -5,6 +5,7 @@
 (load-all-patches)
 
 #+MSWINDOWS (load "C:/apps/asdf/asdf.lisp")
+#+cocoa (load "~/Sources/lisp/asdf.lisp")
 
 ;;; The following lines added by ql:add-to-init-file:
 #-quicklisp

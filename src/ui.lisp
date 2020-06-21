@@ -99,7 +99,7 @@
                                                         main-window-base)
   ((main-window :initform nil
                 :accessor main-window))
-  (:menu-bar application-menu edit-menu)
+  (:menu-bar application-menu)
   (:default-initargs
    :title string.application-name
    :application-menu 'application-menu
@@ -127,7 +127,9 @@
    (duplicates :initform nil)
    (settings :initform (make-instance
                         'settings
-                        :application-name "MediaImport" :application-version "1.0")))
+                        :application-name "MediaImport" :application-version "1.0" ;;(mediaimport.version:version-string)
+                        )))
+  
   (:menus
    ;; pop-up menu in the list of candidates
    (candidates-menu
