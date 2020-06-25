@@ -109,4 +109,5 @@ Possible templates:
   (presets . "Presets")
   (preset-name . "Preset name")
   (default-preset-name . "New preset")
+  (rename-dots . "Rename target...")
   )

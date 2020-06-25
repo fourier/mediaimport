@@ -130,6 +130,9 @@
      (string.copy-to-clipboard
       :callback 'on-candidates-menu-copy
       :callback-type :interface)
+     (string.rename-target-dots
+      :callback 'on-candidates-menu-rename
+      :callback-type :interface)
      (string.delete-from-list
       :callback 'on-candidates-menu-delete
       :callback-type :interface))))

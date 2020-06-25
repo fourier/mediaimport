@@ -50,21 +50,11 @@
                  ;; start worker thread
                  (mp:process-run-function "Collect files" nil #'collect-files-thread-fun self r))))))))
 
-(defun on-candidate-dblclick (item self)
-  (with-slots (proposal-table) self
-    ;; make sense only for those with target
-    (when (file-candidate-target item)
-      (let ((message 
-             (format nil string.rename-dlg-fmt (namestring (file-candidate-source item)))))
-        (multiple-value-bind (fname result) 
-            (prompt-for-string message :text (namestring (file-candidate-target item)))
-          (when (and result
-                     (not (equal fname (file-candidate-target item))))
-            (setf (file-candidate-target item) (pathname fname))
-            ;; update text
-            (redisplay-collection-item proposal-table item)
-            (update-candidates self (collection-items proposal-table))))))))
 
+(defun on-candidate-dblclick (item self)
+  ;; make sense only for those with target
+  (when (file-candidate-target item)
+    (mediaimport.utils::view-file (namestring (file-candidate-source item)))))
 
 (defun on-copy-button (data self)
   (declare (ignore data))
@@ -97,7 +87,7 @@
 
 (defmethod on-main-window-tooltip ((self main-window) pane type key)
   (when (eq type :tooltip) ;; the only possible type on Cocoa
-    (ecase key
+    (case key
       (pattern-edit string.pattern-tooltip)
       (command-edit string.command-tooltip)
       (input-filemasks-edit string.filemasks-tooltip))))
@@ -163,16 +153,26 @@
 
 (defmethod on-candidates-menu-open ((self main-window))
   "Contex menu item handler, open all selected files with as in finder"
-  #+win32 (display-message "Not implemented")
-  #+cocoa
-  (flet ((open-file (fname)
-           ;; this function implements the following from Cocoa:
-           ;; [[NSWorkspace sharedWorkspace] openFile:path];
-           (objc:invoke (objc:invoke "NSWorkspace" "sharedWorkspace") "openFile:" fname)))
-    (with-slots (proposal-table) self
-      (when-let ((selected (choice-selected-items proposal-table)))
-        (mapc (compose #'open-file #'namestring #'file-candidate-source) selected)))))
+  (with-slots (proposal-table) self
+    (when-let ((selected (choice-selected-items proposal-table)))
+      (mapc (compose #'mediaimport.utils:view-file #'namestring #'file-candidate-source) selected))))
 
+(defmethod on-candidates-menu-rename ((self main-window))
+  (with-slots (proposal-table) self
+    ;; make sense only for those with target
+    (when-let ((items (choice-selected-items proposal-table)))
+      (let ((item (car items)))
+        (when (file-candidate-target item)
+          (let ((message 
+                 (format nil string.rename-dlg-fmt (namestring (file-candidate-source item)))))
+            (multiple-value-bind (fname result) 
+                (prompt-for-string message :text (namestring (file-candidate-target item)))
+              (when (and result
+                         (not (equal fname (file-candidate-target item))))
+                (setf (file-candidate-target item) (pathname fname))
+                ;; update text
+                (redisplay-collection-item proposal-table item)
+                (update-candidates self (collection-items proposal-table))))))))))
 
 (defun on-command-edit-changed (str edit interface caret-pos)
   "Callback called when command text changed. Used to validate the command"

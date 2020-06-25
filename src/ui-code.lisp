@@ -94,6 +94,18 @@
                            (typep (slot-value self (slot-value slot 'clos::name)) 'capi:text-input-choice))
                          (class-slots (class-of self)))))
 
+
+(defmethod get-choice-panes ((self main-window))
+  "Returns a list of symbol names of all text-input-choice panes of SELF"
+  ;; extract slot name
+  (mapcar (lambda (slot) (slot-value slot 'clos::name))
+          ;; iterate over slots keep only those of type capi:text-input-choice
+          (remove-if-not (lambda (slot)
+                           (typep (slot-value self (slot-value slot 'clos::name)) 'capi:text-input-choice))
+                         (class-slots (class-of self)))))
+
+;;(comparison-type (cdr (choice-selected-item comparison-options-panel)))
+
 (defmethod restore-edit-controls-history ((self main-window))
   "Replaces the contents of all edit-choice fields with the stored"
   (with-slots (settings) self

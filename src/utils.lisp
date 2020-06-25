@@ -17,7 +17,9 @@
    format-string
    mappings-in-format-string
    define-resource
-   push-top))
+   push-top
+   md5string
+   view-file))
 
    
 (in-package #:mediaimport.utils)
@@ -68,6 +70,32 @@ In the last example imports all the exported symbols from the package given."
                    (let ((import-symbol (find-symbol (string-upcase (symbol-name symb)) pkg)))
                      `(shadowing-import ,(list 'quote import-symbol))))
                  symbols)))))
+
+#+win32
+(progn
+  (fli:define-c-typedef fli-hwnd
+    (:unsigned :long))
+  (fli:define-foreign-function (shell-execute-w32 "ShellExecute" :dbcs)
+      ((hwnd fli-hwnd)
+       (lpop :pointer)
+       (lpfile :pointer)
+       (lpparams :pointer)
+       (lpdir :pointer)
+       (nshowcmd :int))
+    :result-type :pointer)
+  (defun shell-execute (operation file params dir showcmd)
+    (let ((external-format (if (string= (software-type)
+                                        "Windows NT")
+                               :unicode
+                               :ascii)))
+      (flet ((strconv (arg)
+               (fli:convert-to-foreign-string arg :external-format external-format :allow-null t)))
+        (shell-execute-w32 0
+                           (strconv operation)
+                           (strconv file)
+                           (strconv params)
+                           (strconv dir)
+                           showcmd)))))
 
 (defun interleave (list1 list2)
   "Interleaves 2 lists.
@@ -263,3 +291,31 @@ Example:
 (\"bb\" \"aa\" \"cc\" \"dd\")"
   (deletef lst elt :test test)
   (push elt lst))
+
+
+(defun md5string (str)
+  "Return a string representing MD5 hash of the input string STR"
+  (ironclad:byte-array-to-hex-string
+   (ironclad:digest-sequence :md5
+                             (babel:string-to-octets str))))
+
+
+(defun string-to-base-string (str)
+  (loop with len = (length str)
+        with result = (make-string len :element-type 'base-char)
+        for n across (babel:string-to-octets str :encoding :utf-8)
+        for i below len 
+        do (setf (schar result i) (code-char n))
+        finally (return result)))
+
+
+(defun view-file (filename)
+  #+win32
+  (shell-execute "open" filename nil nil 1)
+  #+cocoa
+  ;; this function implements the following from Cocoa:
+  ;; [[NSWorkspace sharedWorkspace] openFile:path];
+  (objc:invoke (objc:invoke "NSWorkspace" "sharedWorkspace") "openFile:" filename)
+  #+linux
+  (sys:call-system (list "/usr/bin/xdg-open" (string-to-base-string filename)) :wait nil))
+
