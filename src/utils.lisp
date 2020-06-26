@@ -301,9 +301,12 @@ Example:
 
 
 (defun string-to-base-string (str)
-  (loop with len = (length str)
+  "Convert unicode string STR to UTF-8 and then to base-string,
+which is accepted by sys:call-system function"
+  (loop with bytes = (babel:string-to-octets str :encoding :utf-8)
+        with len = (length bytes)
         with result = (make-string len :element-type 'base-char)
-        for n across (babel:string-to-octets str :encoding :utf-8)
+        for n across bytes 
         for i below len 
         do (setf (schar result i) (code-char n))
         finally (return result)))
