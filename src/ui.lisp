@@ -191,7 +191,7 @@
                    :color-function 'color-file-candidate
                    :action-callback 'on-candidate-dblclick
                    :pane-menu candidates-menu
-                   :interaction :extended-selection
+                   :interaction :multiple-selection
                    :columns `((:title ,string.from-column 
                                :adjust :left 
                                :visible-min-width (:character 45))
