@@ -313,6 +313,8 @@ which is accepted by sys:call-system function"
 
 
 (defun view-file (filename)
+  "Call default Open action for the file provided by its filename.
+For example it could be view the image, play the movie etc"
   #+win32
   (shell-execute "open" filename nil nil 1)
   #+cocoa
