@@ -22,6 +22,7 @@
                  (:file "datetime")
                  (:file "renamer")
                  #+lispworks(:file "ui")
+                 #+lispworks(:file "ui-presets")
                  #+lispworks(:file "ui-code")
                  #+lispworks(:file "ui-callbacks")
                  #+lispworks (:file "mediaimport"))))
