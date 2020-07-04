@@ -21,10 +21,14 @@
                  (:file "strings")
                  (:file "datetime")
                  (:file "renamer")
-                 #+lispworks(:file "ui")
-                 #+lispworks(:file "ui-presets")
-                 #+lispworks(:file "ui-code")
-                 #+lispworks(:file "ui-callbacks")
+                 #+lispworks
+                 (:module "ui"
+                  :serial t
+                  :components
+                  ((:file "interfaces")
+                   (:file "functions")
+                   (:file "callbacks")
+                   (:file "presets")))
                  #+lispworks (:file "mediaimport"))))
   :in-order-to ((test-op (test-op mediaimport-test))))
   

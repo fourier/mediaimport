@@ -117,8 +117,10 @@
    (duplicates :initform nil)
    (settings :initform (make-instance
                         'settings
-                        :application-name "MediaImport" :application-version "1.0" ;;(mediaimport.version:version-string)
-                        )))
+                        :application-name "MediaImport" :application-version "1.0"
+                        ;;(mediaimport.version:version-string)
+                        )
+             :reader main-window-settings))
   
   (:menus
    ;; pop-up menu in the list of candidates
