@@ -16,3 +16,4 @@ Go to [this location](https://github.com/fourier/mediaimport/releases) to downlo
 
 ## Copyright
 Copyright (c) [Alexey Veretennikov](mailto:alexey.veretennikov@gmail.com). 
+Icon made by Pixel perfect from www.flaticon.com

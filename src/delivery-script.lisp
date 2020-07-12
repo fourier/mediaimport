@@ -45,6 +45,8 @@
          "C:/Sources/lisp/mediaimport/mediaimport.exe"
          4
          :interface :capi
+         :icon-file (current-pathname "../mediaimport.ico")
+         :registry-path "mediaimport"
          :keep-symbols '(mediaimport.ui::geometry-settings) ;; why doesn't work ?
          :startup-bitmap-file nil)
 

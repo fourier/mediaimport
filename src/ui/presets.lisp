@@ -7,7 +7,8 @@
   ((name :initform "Default" :reader preset-name)
    (edits :initarg :edits :initform nil)
    (checkboxes :initarg :checkboxes :initform nil)
-   (radioboxes :initarg :radioboxes :initform nil))
+   (radioboxes :initarg :radioboxes :initform nil)
+   (registry-path :initarg :registry-path :initform "Presets"))
   (:documentation "A collection of values for the form. Arguments to constructor
 should all be lists of symbols"))
 
@@ -27,13 +28,14 @@ should all be lists of symbols"))
 
 (defmethod preset-load ((preset preset) (settings settings))
   "Populate the preset from settings, or leave defaults"
-  ;; form the path to preset in form "Presets/PRESET_MD5"
-  (let ((base-path (string-append "Presets/" (md5string (preset-name preset)) "/")))
-    (multiple-value-bind (val found) (get-value settings (string-append base-path "name"))
-      (when found ; yahoo! we got something saved, at least name
-        (setf (slot-value preset 'name) val)
-        ;; now let's load fields
-        (with-slots (edits checkboxes radioboxes) preset
+  (with-slots (edits checkboxes radioboxes registry-path) preset
+    ;; form the path to preset in form "Presets/PRESET_MD5"
+    (let ((base-path
+           (string-append registry-path "/" (md5string (preset-name preset)) "/")))
+      (multiple-value-bind (val found) (get-value settings (string-append base-path "name"))
+        (when found ; yahoo! we got something saved, at least name
+          (setf (slot-value preset 'name) val)
+          ;; now let's load fields
           ;; start with edits
           (loop for k being each hash-key of edits
                 for path = (string-append base-path (symbol-name k))
