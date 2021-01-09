@@ -321,6 +321,7 @@ For example it could be view the image, play the movie etc"
   ;; this function implements the following from Cocoa:
   ;; [[NSWorkspace sharedWorkspace] openFile:path];
   (objc:invoke (objc:invoke "NSWorkspace" "sharedWorkspace") "openFile:" filename)
-  #+linux
-  (sys:call-system (list "/usr/bin/xdg-open" (string-to-base-string filename)) :wait nil))
-
+  #+(and linux lispworks)
+  (sys:call-system (list "/usr/bin/xdg-open" (string-to-base-string filename)) :wait nil)
+  #+sbcl
+  (error "Not implemented"))
