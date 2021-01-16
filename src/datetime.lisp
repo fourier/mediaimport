@@ -90,19 +90,25 @@ The GPSTimeStamp is in format like #(18 29 299/10)"
 the file FILENAME. If no EXIF found returns nil"
   (handler-case
       (let* ((exif (zpb-exif:make-exif (truename filename)))
-             (dto (zpb-exif:exif-value :DateTimeOriginal exif))
-             ;; "2012:01:23 00:17:40"
-             (dt (zpb-exif:exif-value :DateTime exif))
-             ;; "2012:01:23 00:17:40"
-             (gds (zpb-exif:exif-value :GPSDateStamp exif))
-             ;;"2015:06:09"
-             (gts (zpb-exif:exif-value :GPSTimeStamp exif)))
-        ;; #(18 29 299/10)
-        ;; logic the flowing:
-        (cond ((or dto dt) ;; if DateTimeOriginal or DateTime, use it
-               (make-datetime-from-string (or dto dt)))
-              ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
-               (make-datetime-from-gps-timestamps gds gts))))
+             (exif-ht (alist-hash-table (zpb-exif:exif-alist exif) :test #'equal)))
+        (flet ((get-value (name)
+                 (or (zpb-exif:exif-value name exif) (gethash name exif-ht))))
+          (let ((dto (get-value "DateTimeOriginal"))
+                ;; "2012:01:23 00:17:40"
+                (dt (get-value "DateTime"))
+                ;; "2012:01:23 00:17:40"
+                (dtd (get-value "DateTimeDigitized"))
+                ;; "2016:06:23 12:11:54"
+                (gds (get-value "GPSDateStamp"))
+                ;;"2015:06:09"
+                (gts (get-value "GPSTimeStamp")))
+            ;; #(18 29 299/10)
+            ;; logic the flowing:
+            (cond ((or dto dt dtd)
+                   ;; if DateTimeOriginal or DateTime or DateTimeDigitized, use it
+                   (make-datetime-from-string (or dto dt)))
+                  ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
+                   (make-datetime-from-gps-timestamps gds gts))))))
     (zpb-exif:invalid-exif-stream (err)
       (declare (ignore err))
       nil)))
