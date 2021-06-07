@@ -110,4 +110,5 @@ Possible templates:
   (preset-name . "Preset name")
   (default-preset-name . "New preset")
   (rename-target-dots . "Rename target...")
+  (open-folder-after . "Open folder after copy")
   )

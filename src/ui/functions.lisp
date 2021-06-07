@@ -203,7 +203,7 @@
     (file-candidate-color candidate)))
 
 
-(defmethod copy-files-thread-fun ((self main-window) items external-command delete-original)
+(defmethod copy-files-thread-fun ((self main-window) items external-command delete-original &optional (open-folder nil))
   "Worker function to copy/apply command to files.
 ITEMS is an array of FILE-CANDIDATE-ITEMs. EXTERNAL-COMMAND is a boolean flag;
 if T execute command from command-edit, otherwise just copy files"
@@ -243,8 +243,11 @@ if T execute command from command-edit, otherwise just copy files"
                                       :stream (collector-pane-stream (slot-value self 'output-edit))
                                       :delete-original delete-original))))
         (copy-files items :callback #'copy-files-callback :delete-original delete-original))
-    ;; and finally update progress, hide it and enable all buttons
-    (toggle-progress self nil :end (length items))))
+    ;; update progress, hide it and enable all buttons
+    (toggle-progress self nil :end (length items))
+    ;; and finally open folder if the setting requested
+;;    (when open-folder (open-folder
+))
 
 
 (defmethod toggle-progress ((self main-window) enable &key (start 0) end)

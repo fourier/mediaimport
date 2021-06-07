@@ -54,13 +54,14 @@
 (defun on-candidate-dblclick (item self)
   ;; make sense only for those with target
   (when (file-candidate-target item)
-    (mediaimport.utils::view-file (namestring (file-candidate-source item)))))
+    (mediaimport.utils:view-file (namestring (file-candidate-source item)))))
 
 (defun on-copy-button (data self)
   (declare (ignore data))
   (with-slots (proposal-table) self
     (let ((do-copy (setting-selected self :use-custom-command))
-          (delete-original (setting-selected self :move-instead-of-copy)))
+          (delete-original (setting-selected self :move-instead-of-copy))
+          (open-folder (setting-selected self :open-folder-after)))
       ;; ask for confirmation
       (when (confirm-yes-or-no
              string.start-copy-confirmation)
@@ -83,7 +84,7 @@
                                      nil
                                      #'copy-files-thread-fun
                                      self
-                                     items do-copy delete-original)))))))
+                                     items do-copy delete-original open-folder)))))))
 
 (defmethod on-main-window-tooltip ((self main-window) pane type key)
   (when (eq type :tooltip) ;; the only possible type on Cocoa

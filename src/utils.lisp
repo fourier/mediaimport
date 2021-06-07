@@ -19,7 +19,8 @@
    define-resource
    push-top
    md5string
-   view-file))
+   view-file
+   open-folder))
 
    
 (in-package #:mediaimport.utils)
@@ -323,5 +324,23 @@ For example it could be view the image, play the movie etc"
   (objc:invoke (objc:invoke "NSWorkspace" "sharedWorkspace") "openFile:" filename)
   #+(and linux lispworks)
   (sys:call-system (list "/usr/bin/xdg-open" (string-to-base-string filename)) :wait nil)
+  #+sbcl
+  (error "Not implemented"))
+
+
+(defun open-folder (dirname)
+  "Call default Open folder action for the DIRNAME provided.
+It should open Explorer in the directory DIRNAME on Windows,
+Finder on OSX and current program defined for the directories on
+Linux (via xdg-open"
+  #+win32
+  (shell-execute "explore" dirname nil nil 1)
+  #+cocoa
+  ;; this function implements the following from Cocoa:
+  ;; [[NSWorkspace sharedWorkspace] selectFile:nil inFileViewerRootedAtPath:DIRNAME];
+  ;; NOT TESTED! TODO: Test it
+  (objc:invoke (objc:invoke "NSWorkspace" "sharedWorkspace") "selectFile:" nil "inFileViewerRootedAtPath:" dirname)
+  #+(and linux lispworks)
+  (sys:call-system (list "/usr/bin/xdg-open" (string-to-base-string dirname)) :wait nil)
   #+sbcl
   (error "Not implemented"))

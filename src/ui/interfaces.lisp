@@ -37,7 +37,8 @@
   `((:use-exif . ,string.use-exif)
     (:search-in-subdirs . ,string.search-in-subdirs)
     (:use-custom-command . ,string.use-custom-command)
-    (:move-instead-of-copy . ,string.move-instead-of-copy))
+    (:move-instead-of-copy . ,string.move-instead-of-copy)
+    (:open-folder-after . ,string.open-folder-after))
   "Data for the settings checkboxes - symbol to string mapping")
 
 
