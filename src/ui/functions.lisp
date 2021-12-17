@@ -1,4 +1,4 @@
-;;;; ui-code.lisp
+;;;; functions.lisp
 ;; 
 
 (in-package #:mediaimport.ui)

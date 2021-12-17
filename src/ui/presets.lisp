@@ -1,10 +1,13 @@
-;;;; ui-presets.lisp
+;;;; presets.lisp
 ;; 
 
 (in-package #:mediaimport.ui)
 
+(defparameter *default-preset-name* "<<Default>>"
+  "Hard-coded name for the default preset")
+
 (defclass preset ()
-  ((name :initform "Default" :reader preset-name)
+  ((name :initarg :name :initform *default-preset-name* :reader preset-name)
    (edits :initarg :edits :initform nil)
    (checkboxes :initarg :checkboxes :initform nil)
    (radioboxes :initarg :radioboxes :initform nil)
@@ -80,6 +83,6 @@ should all be lists of symbols"))
             do (set-value settings path v)))))
 
   
-
-  
+;;; (defmethod list-presets ((settings settings))
+;;;   )
   

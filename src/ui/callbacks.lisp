@@ -1,4 +1,4 @@
-;;;; ui-callbacks.lisp
+;;;; callbacks.lisp
 ;; 
 
 (in-package #:mediaimport.ui)
@@ -147,7 +147,7 @@
 (defmethod on-candidates-menu-delete ((self main-window))
   (with-slots (proposal-table) self
     (when-let ((selected (choice-selected-items proposal-table)))
-      (when (confirm-yes-or-no string.remove-files-fmt
+      (when (confirm-yes-or-no string.remove-files-question
                                (mapcar #'file-candidate-source selected))
         (remove-items proposal-table selected)))))
 

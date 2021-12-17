@@ -92,7 +92,7 @@ Possible templates:
 {TARGET} full path to the target file")
   (filemasks-tooltip . "Comma-separated list of file masks, like \"*.jpg,*.png\"")  
   (prompt-save-script . "Choose script name to save")
-  (remove-files-fmt . "Remove these files from the list?~%~{~A~^~%~}")
+  (remove-files-question . "Remove selected files from the list?")
   (clear-history-menu . "Clear history...")
   (clear-history-dialog-title . "Clear history")
   (clear-history-question . "Clear history for selected fields?")

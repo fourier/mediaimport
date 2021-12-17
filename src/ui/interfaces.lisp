@@ -1,4 +1,4 @@
-;;;; ui.lisp
+;;;; interfaces.lisp
 ;; 
 ;; To run, execute (mediaimport:main)
 ;;
