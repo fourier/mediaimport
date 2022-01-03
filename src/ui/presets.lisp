@@ -9,7 +9,17 @@
   (:shadowing-import-from #:alexandria
    if-let removef when-let* appendf copy-file with-unique-names nconcf when-let)
   (:add-use-defaults t)
-  (:export preset))
+  (:export
+   preset
+   preset-name
+   preset-checkboxes
+   preset-edits
+   preset-radioboxes
+   list-presets
+   load-default-preset
+   create-default-preset
+   create-preset
+   load-presets))
 
 (in-package #:mediaimport.ui.presets)
 
@@ -49,12 +59,12 @@
 (defclass preset ()
   ((name :initarg :name :initform *default-preset-name* :reader preset-name
          :documentation "User-readable preset name. Will be used in UI elements - menus etc")
-   (edits :initarg :edits :initform nil
+   (edits :initarg :edits :initform nil :reader preset-edits
           :documentation
           "A hash table where the key is a symbol and a value is a string, key being edit unique identifier")
-   (checkboxes :initarg :checkboxes :initform nil
+   (checkboxes :initarg :checkboxes :initform nil :reader preset-checkboxes
                :documentation "A list of symbols, where every symbol is an identifier of a crossed checkbox item")
-   (radioboxes :initarg :radioboxes :initform nil
+   (radioboxes :initarg :radioboxes :initform nil :reader preset-radioboxes
                :documentation "A list of symbols, where every symbol is an identifier of a active radiobox item")
    (registry-base-path :initarg :base-path :initform *presets-path*
                        :documentation "A path in registry where the preset will be created by appending its hashed name")
@@ -145,6 +155,7 @@ Return nil if not found in registry"
         (unless (member name presets-list :test #'string=)
           (set-value settings *presets-list-path*
                      (nreverse (cons name (nreverse presets-list)))))))))
+
 
 ;;----------------------------------------------------------------------------
 ;; Global functions related to presets

@@ -18,6 +18,7 @@
 
 (in-package #:mediaimport.settings)
 
+(define-constant +product-root+ #+windows "Software" #-windows ".config")
 
 (defclass settings ()
   ((company :reader company
@@ -54,7 +55,7 @@
     (setf version (mediaimport.version:version-string))
     (setf product-symbol (intern name "KEYWORD"))
     (setf (sys:product-registry-path product-symbol)
-          (list "Software" company name version))))
+          (list +product-root+ company name version))))
 
 
 (defmethod get-value ((self settings) key &optional fallback-value)

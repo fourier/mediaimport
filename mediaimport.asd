@@ -25,10 +25,10 @@
                  (:module "ui"
                   :serial t
                   :components
-                  ((:file "interfaces")
+                  ((:file "presets")
+                   (:file "interfaces")
                    (:file "functions")
-                   (:file "callbacks")
-                   (:file "presets")))
+                   (:file "callbacks")))
                  #+lispworks (:file "mediaimport"))))
   :in-order-to ((test-op (test-op mediaimport-test))))
   
