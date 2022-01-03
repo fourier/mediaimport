@@ -97,47 +97,26 @@ Based on ppath:join"
     (setf registry-path
           (create-path registry-base-path (md5string (preset-name self))))))
 
-#|
 (defmethod preset-load ((name string) (settings settings) &optional (base-path *presets-path*))
   "Populate the preset from settings, or leave defaults.
 Return nil if not found in registry"
-  (let ((md5name (md5string name))
-        (preset-path (create-path base-path md5name))
-        (preset (make-instance 'preset :name name :base-path base-path))
+  (let* ((md5name (md5string name))
+         (preset-path (create-path base-path md5name))
+         (preset (make-instance 'preset :name name :base-path base-path)))
     (when-let (realname (get-value settings (create-path preset-path *presets-name-path*)))
       (when (string= realname name) ;; sanity check
-        ;; start with edits
-          (when-let (edits (get-value settings ((create-path registry-path *presets-edits-prefix*))))
-            (let ((ht (make-hash-table)))
-              (setf (slot-value 'edits preset)
-                    (loop for 
-  (with-slots (edits checkboxes radioboxes registry-path) preset
-    (multiple-value-bind (val found) (get-value settings (create-path registry-path *presets-name-path*))
-      (when found ; yahoo! we got something saved, at least name
-        (setf (slot-value preset 'name) val)
         ;; now let's load fields
         ;; start with edits
-        (loop for k being each hash-key of edits
-              for path = (create-path registry-path (symbol-name k))
-              for value = (get-value settings path "")
-              do (setf (gethash k edits) value))
+        (when-let (edits (get-value settings (create-path preset-path *presets-edits-prefix*)))
+          (setf (slot-value preset 'edits) edits))
         ;; now checkboxes
-        (loop for k being each hash-key of checkboxes
-              for path = (create-path registry-path (symbol-name k))
-              for value = (get-value settings path nil)
-              do (setf (gethash k checkboxes) value))
+        (when-let (checkboxes (get-value settings (create-path preset-path *presets-checkboxes-prefix*)))
+          (setf (slot-value preset 'checkboxes) checkboxes))
         ;; and radio boxes
-        (loop for k being each hash-key of radioboxes
-              for path = (create-path registry-path (symbol-name k))
-              for (value result) = (multiple-value-list
-                                    (get-value settings path))
-              if (not result)
-              do (remhash k radioboxes)
-              else
-              do (setf (gethash k edits) value)))
-      ;; return value
-      found)))
-|#
+        (when-let (radioboxes (get-value settings (create-path preset-path *presets-radioboxes-prefix*)))
+          (setf (slot-value preset 'radioboxes) radioboxes))
+        ;; return value
+        preset))))
 
 (defmethod preset-save ((preset preset) (settings settings))
   "Save the preset to settings"
@@ -152,10 +131,10 @@ Return nil if not found in registry"
                (hash-table-alist edits))
     ;; now checkboxes
     (set-value settings (create-path registry-path *presets-checkboxes-prefix*)
-               (mapcar #'symbol-name checkboxes))
+               checkboxes)
     ;; and radio boxes
     (set-value settings (create-path registry-path *presets-radioboxes-prefix*)
-               (mapcar #'symbol-name radioboxes))
+               radioboxes)
     ;; finally update the list of presets for non-default preset
     (when (string= *presets-path* registry-base-path)
       (let ((presets-list (list-presets settings)))
