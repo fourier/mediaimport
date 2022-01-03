@@ -108,7 +108,11 @@ Return nil if not found in registry"
         ;; now let's load fields
         ;; start with edits
         (when-let (edits (get-value settings (create-path preset-path *presets-edits-prefix*)))
-          (setf (slot-value preset 'edits) edits))
+          (loop with ht = (make-hash-table)
+                for kv in edits
+                do (setf (gethash (car kv) ht) (cadr kv))
+                finally
+                (setf (slot-value preset 'edits) ht)))
         ;; now checkboxes
         (when-let (checkboxes (get-value settings (create-path preset-path *presets-checkboxes-prefix*)))
           (setf (slot-value preset 'checkboxes) checkboxes))
@@ -150,27 +154,32 @@ Return nil if not found in registry"
   "Return the list of current preset names from settings"
   (get-value settings *presets-list-path*))
 
-(defmethod save-presets-list ((settings settings) presets)
-  "Save the list of names or presets, extracting their names in this case, in settings"
-  (let ((names 
-         (mapcar (lambda (p)
-                   (etypecase p
-                     (preset (preset-name p))
-                     (string p)))
-                 presets)))
-    (set-value settings *presets-list-path* names)))
-
 (defmethod load-default-preset ((settings settings))
   "Load the default preset or NIL if not found"
-  (let ((default (make-instance 'preset :registry-path *presets-default-path*)))
-    (when (preset-load default settings)
-      default)))
+  (preset-load *presets-default-preset-name* settings *presets-default-path*))
 
+(defmethod create-default-preset ((settings settings) edits checkboxes radioboxes)
+  "Creates and saves the default preset with values provided"
+  (let ((default
+         (make-instance 'preset :name *presets-default-preset-name*
+                        :edits edits
+                        :checkboxes checkboxes
+                        :radioboxes radioboxes
+                        :base-path *presets-default-path*)))
+    (preset-save default settings)))
+
+(defmethod create-preset ((settings settings) name edits checkboxes radioboxes)
+  "Creates and saves the preset with then name and values provided"
+  (let ((default
+         (make-instance 'preset :name name
+                        :edits edits
+                        :checkboxes checkboxes
+                        :radioboxes radioboxes)))
+    (preset-save default settings)))
 
 (defmethod load-presets ((settings settings))
   "Return the list of presets, without default"
-  (mapcar (lambda (name)
-            (let ((preset (make-instance 'preset :name name)))
-              (preset-load preset settings)
-              preset))
-          (list-presets settings)))
+  (loop for name in (list-presets settings)
+        for preset = (preset-load name settings)
+        when preset
+        collect preset))
