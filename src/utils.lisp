@@ -332,7 +332,7 @@ For example it could be view the image, play the movie etc"
   "Call default Open folder action for the DIRNAME provided.
 It should open Explorer in the directory DIRNAME on Windows,
 Finder on OSX and current program defined for the directories on
-Linux (via xdg-open"
+Linux (via xdg-open)"
   #+win32
   (shell-execute "explore" dirname nil nil 1)
   #+cocoa

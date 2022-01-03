@@ -118,6 +118,8 @@
    (duplicates :initform nil)
    (settings :initform (make-instance
                         'settings
+                        ;; TODO: Implement settings upgrade. Otherwise we always
+                        ;; save on the same version.
                         :application-name "MediaImport" :application-version "1.0"
                         ;;(mediaimport.version:version-string)
                         )
