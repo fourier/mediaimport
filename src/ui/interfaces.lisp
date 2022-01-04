@@ -123,7 +123,9 @@
                         :application-name "MediaImport" :application-version "1.0"
                         ;;(mediaimport.version:version-string)
                         )
-             :reader main-window-settings))
+             :reader main-window-settings)
+   (current-preset-name :initform nil :reader main-window-current-preset-name
+                        :documentation "Currently selected preset name. If nil it is the default preset"))
   
   (:menus
    ;; pop-up menu in the list of candidates
@@ -184,6 +186,7 @@
                  :print-function #'car
                  :layout-class 'capi:row-layout
                  :layout-args '(:uniform-size-p t :x-adjust (:left :center :right)))
+   (presets-option-pane option-pane :title string.current)
    (save-preset-button push-button :text string.save-preset :callback 'on-save-preset-button)
    (manage-presets-button push-button :text string.manage-presets :callback 'on-manage-presets-button)
    (proposal-table multi-column-list-panel
@@ -218,10 +221,12 @@
                    :x-ratios '(1 nil)
                    :title string.settings
                    :title-position :frame)
-   (presets-layout row-layout '(save-preset-button manage-presets-button)
+   (presets-layout row-layout '(presets-option-pane 
+                                 save-preset-button manage-presets-button)
+                   :columns 2
                    :title string.presets
                    :title-position :frame)
-   (option-and-presets-layout row-layout '(comparison-options-panel presets-layout))
+   (option-and-presets-layout row-layout '(comparison-options-panel presets-layout) :x-ratios '(nil 1))
    (command-layout row-layout '(command-edit save-script-button)
                    :adjust :center
                    :x-ratios '(1 nil))

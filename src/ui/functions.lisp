@@ -27,7 +27,8 @@
      (capi-object-property input-filemasks-edit 'default-value) string.default-filemasks
      (capi-object-property pattern-edit 'default-value) string.default-output-pattern)
 
-    (restore-edit-controls-history self)))
+    (restore-edit-controls-history self)
+    (fill-presets-list self)))
     
 (defmethod top-level-interface-geometry-key ((self main-window))
   "Sets the key to read/write geometry position"
@@ -145,7 +146,12 @@
                 (setf (collection-items (slot-value self edit)) items))))
           (get-text-choice-panes self))))
 
-  
+
+(defmethod fill-presets-list ((self main-window))
+  "Fill the presets option pane and select last selected"
+  (with-slots (settings) self
+    ))
+
 (defmethod update-candidates ((self main-window) candidates)
   (with-slots (duplicates proposal-table) self
     (setf duplicates (make-instance 'duplicate-finder
