@@ -189,11 +189,11 @@
   "Clear History menu item handler"
   (clear-history self))
 
-(defmethod on-save-preset-button (data (self main-window))
+(defmethod on-new-preset-button (data (self main-window))
   "Save preset button handler"
   (when-let (name (preset-name-dialog string.default-preset-name))
     (display-message name)))
 
-(defmethod on-manage-presets-button (data (self main-window))
+(defmethod on-modify-presets-button (data (self main-window))
   "Manage presets button handler"
   (display (make-instance 'presets-window)))

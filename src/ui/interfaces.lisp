@@ -187,8 +187,8 @@
                  :layout-class 'capi:row-layout
                  :layout-args '(:uniform-size-p t :x-adjust (:left :center :right)))
    (presets-option-pane option-pane :title string.current)
-   (save-preset-button push-button :text string.save-preset :callback 'on-save-preset-button)
-   (manage-presets-button push-button :text string.manage-presets :callback 'on-manage-presets-button)
+   (new-preset-button push-button :text string.new-preset :callback 'on-new-preset-button)
+   (modify-presets-button push-button :text string.modify-presets :callback 'on-modify-presets-button)
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
                    :visible-min-height '(:character 10)
@@ -222,7 +222,7 @@
                    :title string.settings
                    :title-position :frame)
    (presets-layout row-layout '(presets-option-pane 
-                                 save-preset-button manage-presets-button)
+                                 new-preset-button modify-presets-button)
                    :columns 2
                    :title string.presets
                    :title-position :frame)

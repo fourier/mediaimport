@@ -27,7 +27,7 @@
      (capi-object-property input-filemasks-edit 'default-value) string.default-filemasks
      (capi-object-property pattern-edit 'default-value) string.default-output-pattern)
 
-    (restore-edit-controls-history self)
+;;    (restore-edit-controls-history self)
     (fill-presets-list self)))
     
 (defmethod top-level-interface-geometry-key ((self main-window))
@@ -109,6 +109,7 @@
 
 (defmethod restore-edit-controls-history ((self main-window))
   "Replaces the contents of all edit-choice fields with the stored"
+#|  
   (with-slots (settings) self
     ;; for each edit
     (mapc (lambda (edit)
@@ -126,11 +127,14 @@
               (unless (null history)
                 (setf (collection-items (slot-value self edit)) history
                       (text-input-pane-text (slot-value self edit)) (car history)))))
-          (get-text-choice-panes self))))
+          (get-text-choice-panes self)))
+  |#
+  )
 
 
 (defmethod save-edit-controls-history ((self main-window))
   "Saves the history of all edit fields"
+  #|
   (with-slots (settings) self
     ;; for each edit
     (mapc (lambda (edit)
@@ -144,12 +148,20 @@
                 (set-value settings (symbol-name edit) items)
                 ;; and finally update the ui
                 (setf (collection-items (slot-value self edit)) items))))
-          (get-text-choice-panes self))))
+          (get-text-choice-panes self)))
+  |#
+  )
 
 
 (defmethod fill-presets-list ((self main-window))
   "Fill the presets option pane and select last selected"
   (with-slots (settings) self
+    ;; set default values
+    ;;;     (setf
+    ;;;      (capi-object-property input-filemasks-edit 'default-value) string.default-filemasks
+    ;;;      (capi-object-property pattern-edit 'default-value) string.default-output-pattern)
+;    (let ((preset-names (mediaimport.ui.presets:list-presets settings)))
+;      (
     ))
 
 (defmethod update-candidates ((self main-window) candidates)
