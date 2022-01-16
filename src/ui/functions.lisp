@@ -3,6 +3,13 @@
 
 (in-package #:mediaimport.ui)
 
+(defparameter *last-used-preset-path* "Presets/lastpresetname")
+
+(defclass file-candidate-item (file-candidate)
+  ((color :accessor file-candidate-color :initarg :color :initform :black)
+   (status :accessor file-candidate-status :initform nil)
+   (comment :accessor file-candidate-comment :initform "" :initarg :comment)))
+
 (defmethod on-destroy ((self cocoa-application-interface))
   (with-slots (main-window) self
     (when main-window
@@ -16,20 +23,20 @@
 
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
   "Constructor for the main-window class"
-  (with-slots (copy-button
-               input-filemasks-edit
-               pattern-edit)
-      self
+  (with-slots (copy-button) self
+    ;; First disable UI elements
     (setf (button-enabled copy-button) nil)
     (toggle-custom-command self nil)
-    ;; set default values
-    (setf
-     (capi-object-property input-filemasks-edit 'default-value) string.default-filemasks
-     (capi-object-property pattern-edit 'default-value) string.default-output-pattern)
+    ;; Populate presets dropdown list
+    (fill-presets-list self)
+    ;; Then set the default values in fields
+    (fill-default-values self)
+    ;; Restore history of the edit controls
+    (restore-edit-controls-history self)
+    ;; And finally recover the last preset
+    (restore-from-last-preset self)))
 
-;;    (restore-edit-controls-history self)
-    (fill-presets-list self)))
-    
+
 (defmethod top-level-interface-geometry-key ((self main-window))
   "Sets the key to read/write geometry position"
   (values :geometry-settings (product (slot-value self 'settings))))
@@ -38,12 +45,6 @@
 (defmethod top-level-interface-save-geometry-p ((self main-window))
   "Returns true if need to save geometry"
   t)
-
-
-(defclass file-candidate-item (file-candidate)
-  ((color :accessor file-candidate-color :initarg :color :initform :black)
-   (status :accessor file-candidate-status :initform nil)
-   (comment :accessor file-candidate-comment :initform "" :initarg :comment)))
 
 
 (defmethod update-candidate-status ((self file-candidate-item))
@@ -96,20 +97,29 @@
                          (class-slots (class-of self)))))
 
 
-(defmethod get-choice-panes ((self main-window))
-  "Returns a list of symbol names of all text-input-choice panes of SELF"
+(defmethod get-radio-button-panel-panes ((self main-window))
+  "Returns a list of symbol names of all radio-button-panel panes of SELF"
   ;; extract slot name
   (mapcar (lambda (slot) (slot-value slot 'clos::name))
           ;; iterate over slots keep only those of type capi:text-input-choice
           (remove-if-not (lambda (slot)
-                           (typep (slot-value self (slot-value slot 'clos::name)) 'capi:text-input-choice))
+                           (typep (slot-value self (slot-value slot 'clos::name)) 'capi:radio-button-panel))
                          (class-slots (class-of self)))))
+
+(defmethod get-check-button-panel-panes ((self main-window))
+  "Returns a list of symbol names of all check-button-panel panes of SELF"
+  ;; extract slot name
+  (mapcar (lambda (slot) (slot-value slot 'clos::name))
+          ;; iterate over slots keep only those of type capi:text-input-choice
+          (remove-if-not (lambda (slot)
+                           (typep (slot-value self (slot-value slot 'clos::name)) 'capi:check-button-panel))
+                         (class-slots (class-of self)))))
+
 
 ;;(comparison-type (cdr (choice-selected-item comparison-options-panel)))
 
 (defmethod restore-edit-controls-history ((self main-window))
   "Replaces the contents of all edit-choice fields with the stored"
-#|  
   (with-slots (settings) self
     ;; for each edit
     (mapc (lambda (edit)
@@ -127,14 +137,11 @@
               (unless (null history)
                 (setf (collection-items (slot-value self edit)) history
                       (text-input-pane-text (slot-value self edit)) (car history)))))
-          (get-text-choice-panes self)))
-  |#
-  )
+          (get-text-choice-panes self))))
 
 
 (defmethod save-edit-controls-history ((self main-window))
   "Saves the history of all edit fields"
-  #|
   (with-slots (settings) self
     ;; for each edit
     (mapc (lambda (edit)
@@ -148,21 +155,8 @@
                 (set-value settings (symbol-name edit) items)
                 ;; and finally update the ui
                 (setf (collection-items (slot-value self edit)) items))))
-          (get-text-choice-panes self)))
-  |#
-  )
+          (get-text-choice-panes self))))
 
-
-(defmethod fill-presets-list ((self main-window))
-  "Fill the presets option pane and select last selected"
-  (with-slots (settings) self
-    ;; set default values
-    ;;;     (setf
-    ;;;      (capi-object-property input-filemasks-edit 'default-value) string.default-filemasks
-    ;;;      (capi-object-property pattern-edit 'default-value) string.default-output-pattern)
-;    (let ((preset-names (mediaimport.ui.presets:list-presets settings)))
-;      (
-    ))
 
 (defmethod update-candidates ((self main-window) candidates)
   (with-slots (duplicates proposal-table) self
@@ -349,3 +343,130 @@ symbols in *settings-checkboxes*"
 (defmethod initialize-instance :after ((self presets-window) &key &allow-other-keys)
   "Constructor for the presets-window class"
   )
+
+(defmethod get-ui-values ((self main-window))
+  (let ((edits
+         (mapcar (lambda (symb)
+                   (cons symb (text-input-pane-text (slot-value self symb))))
+                 (get-text-choice-panes self)))
+        (check-buttons
+         (flatten
+          (mapcar (lambda (symb)
+                    (let ((panel (slot-value self symb)))
+                      (mapcar #'car (choice-selected-items panel))))
+                  (get-check-button-panel-panes self))))
+        (radio-buttons
+         (flatten
+          (mapcar (lambda (symb)
+                    (let ((panel (slot-value self symb)))
+                      (mapcar #'cdr (choice-selected-items panel))))
+                  (get-radio-button-panel-panes self)))))
+    (list edits check-buttons radio-buttons)))
+
+(defmethod use-preset ((self main-window) (preset mediaimport.ui.presets:preset))
+  "Fill the window from the preset provided"
+  ;; collect all controls to restore from preset
+  (let ((edits (mapcar (lambda (sym)
+                         (cons sym (slot-value self sym)))
+                       (get-text-choice-panes self)))
+        (choice-panes (mapcar (curry #'slot-value self) (get-check-button-panel-panes self)))
+        (radio-panes (mapcar (curry #'slot-value self) (get-radio-button-panel-panes self))))
+    ;; First set the Edits
+    (loop with preset-edits = (mediaimport.ui.presets:preset-edits preset)
+          for (sym . ctrl) in edits
+          when (gethash sym preset-edits)
+          do 
+          (setf (text-input-pane-text ctrl) (gethash sym preset-edits)))
+    ;; Next fill the choice panes
+    (loop with preset-choices = (mediaimport.ui.presets:preset-checkboxes preset)
+          for choice-pane in choice-panes
+          for items = (collection-items choice-pane)
+          do
+          (setf (choice-selection choice-pane)
+                (loop for pair across items
+                      for i from 0
+                      when (member (car pair) preset-choices)
+                      collect i)))
+    ;; Finally fill the radio panes
+    (loop with preset-radioboxes = (mediaimport.ui.presets:preset-radioboxes preset)
+          for radio-pane in radio-panes
+          for items = (collection-items radio-pane)
+          do
+          (setf (choice-selection radio-pane)
+                (loop for pair across items
+                      for i from 0
+                      when (member (cdr pair) preset-radioboxes)
+                      return i)))))
+
+(defmethod fill-default-values ((self main-window))
+  "Fill the window with default values"
+  (todo "Not implemented")
+  (with-slots (input-filemasks-edit
+               pattern-edit)
+      self
+    ;; set default values
+    (setf
+     (capi-object-property input-filemasks-edit 'default-value) string.default-filemasks
+     (capi-object-property pattern-edit 'default-value) string.default-output-pattern)))
+
+(defmethod save-preset ((self main-window) &optional name)
+  "Save the current window state into preset.
+If no name provided save the default preset"
+  (with-slots (settings) self
+    (set-value settings *last-used-preset-path* name)
+    (let ((edits
+           (mapcar (lambda (sym)
+                     (cons sym (text-input-pane-text (slot-value self sym))))
+                   (get-text-choice-panes self)))
+          (radioboxes
+           (flatten 
+            (funcall #'append
+                     (mapcar (lambda (sym)
+                               (mapcar
+                                #'cdr
+                                (choice-selected-items (slot-value self sym))))
+                             (get-radio-button-panel-panes self)))))
+          (checkboxes
+           (flatten
+            (funcall #'append
+                     (mapcar (lambda (sym)
+                               (mapcar
+                                #'car
+                                (choice-selected-items (slot-value self sym))))
+                             (get-check-button-panel-panes self))))))
+      (if name ;; named preset
+          (mediaimport.ui.presets:create-preset
+           settings name edits checkboxes radioboxes)
+          (mediaimport.ui.presets:create-default-preset
+           settings edits checkboxes radioboxes)))))
+
+(defmethod current-preset-name ((self main-window))
+  "Returns the current selected preset name or nil if default"
+  (with-slots (presets-option-pane) self
+    (if (choice-selected-item-p
+         presets-option-pane
+         string.default-preset-visible-name)
+        nil 
+        (choice-selected-item presets-option-pane))))
+
+(defmethod restore-from-last-preset ((self main-window))
+  "Restore the window state from last used preset or default"
+  (with-slots (settings) self
+    (when-let (preset 
+               ;; Load last used preset name
+               (if-let (last-preset-name
+                        (get-value settings *last-used-preset-path*))
+                   ;; named preset was used
+                   (mediaimport.ui.presets:preset-load
+                    last-preset-name
+                    settings)
+                 ;; load default preset
+                 (mediaimport.ui.presets:load-default-preset settings)))
+      (use-preset self preset))))
+
+(defmethod fill-presets-list ((self main-window))
+  "Fill the presets option pane and select last selected"
+  (with-slots (settings presets-option-pane) self
+    (setf (collection-items presets-option-pane)
+          (cons string.default-preset-visible-name
+                (mediaimport.ui.presets:list-presets settings)))))

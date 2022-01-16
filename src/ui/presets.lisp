@@ -15,6 +15,7 @@
    preset-checkboxes
    preset-edits
    preset-radioboxes
+   preset-load
    list-presets
    load-default-preset
    create-default-preset
@@ -94,7 +95,7 @@ Based on ppath:join"
 (defmethod initialize-instance :after ((self preset) &key &allow-other-keys)
   "Constructor for the preset class"
   (with-slots (edits registry-path registry-base-path) self
-    ;; first handle the edits. It could be
+    ;; Handle the edits separately. It could be
     ;; - nil
     ;; - a list of pairs (symbol . string)
     ;; - a hash table
@@ -118,11 +119,8 @@ Return nil if not found in registry"
         ;; now let's load fields
         ;; start with edits
         (when-let (edits (get-value settings (create-path preset-path *presets-edits-prefix*)))
-          (loop with ht = (make-hash-table)
-                for kv in edits
-                do (setf (gethash (car kv) ht) (cadr kv))
-                finally
-                (setf (slot-value preset 'edits) ht)))
+          (setf (slot-value preset 'edits)
+                (alist-hash-table edits)))
         ;; now checkboxes
         (when-let (checkboxes (get-value settings (create-path preset-path *presets-checkboxes-prefix*)))
           (setf (slot-value preset 'checkboxes) checkboxes))
@@ -181,12 +179,12 @@ Return nil if not found in registry"
 
 (defmethod create-preset ((settings settings) name edits checkboxes radioboxes)
   "Creates and saves the preset with then name and values provided"
-  (let ((default
+  (let ((new-preset
          (make-instance 'preset :name name
                         :edits edits
                         :checkboxes checkboxes
                         :radioboxes radioboxes)))
-    (preset-save default settings)))
+    (preset-save new-preset settings)))
 
 (defmethod load-presets ((settings settings))
   "Return the list of presets, without default"
@@ -194,3 +192,4 @@ Return nil if not found in registry"
         for preset = (preset-load name settings)
         when preset
         collect preset))
+

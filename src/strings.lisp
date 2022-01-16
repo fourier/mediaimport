@@ -112,4 +112,5 @@ Possible templates:
   (rename-target-dots . "Rename target...")
   (open-folder-after . "Open folder after copy")
   (current . "Current")
+  (default-preset-visible-name . "<<Default>>")
   )

@@ -4,6 +4,7 @@
   (:use #:cl #:alexandria)
   (:export
    from
+   todo
    interleave
    partition
    file-size
@@ -72,6 +73,10 @@ In the last example imports all the exported symbols from the package given."
                      `(shadowing-import ,(list 'quote import-symbol))))
                  symbols)))))
 
+(defmacro todo (datum &rest arguments)
+  "Issue the compiler warning starting with TODO: string"
+  (apply 'warn (concatenate 'string "TODO: " datum) arguments))
+
 #+win32
 (progn
   (fli:define-c-typedef fli-hwnd
@@ -97,6 +102,7 @@ In the last example imports all the exported symbols from the package given."
                            (strconv params)
                            (strconv dir)
                            showcmd)))))
+
 
 (defun interleave (list1 list2)
   "Interleaves 2 lists.

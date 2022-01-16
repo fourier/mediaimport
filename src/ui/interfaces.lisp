@@ -186,7 +186,7 @@
                  :print-function #'car
                  :layout-class 'capi:row-layout
                  :layout-args '(:uniform-size-p t :x-adjust (:left :center :right)))
-   (presets-option-pane option-pane :title string.current)
+   (presets-option-pane option-pane :title string.current :test-function #'string= )
    (new-preset-button push-button :text string.new-preset :callback 'on-new-preset-button)
    (modify-presets-button push-button :text string.modify-presets :callback 'on-modify-presets-button)
    (proposal-table multi-column-list-panel
@@ -201,13 +201,13 @@
                    :pane-menu candidates-menu
                    :interaction :extended-selection
                    :columns `((:title ,string.from-column 
-                               :adjust :left 
+                               :adjust :left
                                :visible-min-width (:character 45))
                               (:title ,string.to-column
                                :adjust :left 
                                :visible-min-width (:character 45))
                               (:title ,string.comments-column
-                               :adjust :left 
+                               :adjust :left
                                :visible-min-width (:character 45))))
    (output-edit collector-pane :buffer-name "Output buffer")
    (collect-button push-button :text string.collect-data :callback 'on-collect-button)

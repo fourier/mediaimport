@@ -45,6 +45,8 @@
                                         :recursive (setting-selected self :search-in-subdirs))))
                  ;; save the edit fields to the history
                  (save-edit-controls-history self)
+                 ;; save preset
+                 (save-preset self (current-preset-name self))
                  ;; toggle progress bar indication
                  (toggle-progress self t :end 1)
                  ;; start worker thread
