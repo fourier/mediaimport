@@ -396,7 +396,12 @@ symbols in *settings-checkboxes*"
                 (loop for pair across items
                       for i from 0
                       when (member (cdr pair) preset-radioboxes)
-                      return i)))))
+                      return i))))
+  ;; select the loaded preset in dropdown list
+  (setf (choice-selected-item
+         (slot-value self 'presets-option-pane))
+         (mediaimport.ui.presets:preset-name preset)))
+
 
 (defmethod fill-default-values ((self main-window))
   "Fill the window with default values"
