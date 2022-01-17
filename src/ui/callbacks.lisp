@@ -54,6 +54,7 @@
 
 
 (defun on-candidate-dblclick (item self)
+  (declare (ignore self))
   ;; make sense only for those with target
   (when (file-candidate-target item)
     (mediaimport.utils:view-file (namestring (file-candidate-source item)))))
@@ -199,3 +200,19 @@
 (defmethod on-modify-presets-button (data (self main-window))
   "Manage presets button handler"
   (display (make-instance 'presets-window)))
+
+(defmethod on-preset-change-callback (item (self main-window))
+  "Called when the user changes the preset in dropdown list"
+  (with-slots (settings) self
+    (let ((name (if (string= item string.default-preset-visible-name)
+                    nil
+                    item)))
+      (when-let (preset
+                 (if name (mediaimport.ui.presets:preset-load
+                           name 
+                           settings)
+                     ;; load default preset
+                     (mediaimport.ui.presets:load-default-preset settings)))
+        (use-preset self preset)))))
+
+

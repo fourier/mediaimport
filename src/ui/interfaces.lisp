@@ -186,7 +186,9 @@
                  :print-function #'car
                  :layout-class 'capi:row-layout
                  :layout-args '(:uniform-size-p t :x-adjust (:left :center :right)))
-   (presets-option-pane option-pane :title string.current :test-function #'string= )
+   (presets-option-pane option-pane :title string.current :test-function #'string=
+                        :selection-callback #'on-preset-change-callback
+                        :callback-type :item-interface)
    (new-preset-button push-button :text string.new-preset :callback 'on-new-preset-button)
    (modify-presets-button push-button :text string.modify-presets :callback 'on-modify-presets-button)
    (proposal-table multi-column-list-panel
