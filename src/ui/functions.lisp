@@ -400,7 +400,14 @@ symbols in *settings-checkboxes*"
   ;; select the loaded preset in dropdown list
   (setf (choice-selected-item
          (slot-value self 'presets-option-pane))
-         (mediaimport.ui.presets:preset-name preset)))
+         (mediaimport.ui.presets:preset-name preset))
+  ;; and save it as a last used
+  (let ((name
+         (if (string= (mediaimport.ui.presets:preset-name preset) string.default-preset-visible-name)
+             nil 
+             (mediaimport.ui.presets:preset-name preset))))
+    (set-value (slot-value self 'settings) *last-used-preset-path* name)))
+
 
 
 (defmethod fill-default-values ((self main-window))
