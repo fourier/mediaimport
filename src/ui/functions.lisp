@@ -406,7 +406,8 @@ symbols in *settings-checkboxes*"
          (if (string= (mediaimport.ui.presets:preset-name preset) string.default-preset-visible-name)
              nil 
              (mediaimport.ui.presets:preset-name preset))))
-    (set-value (slot-value self 'settings) *last-used-preset-path* name)))
+    (set-value (slot-value self 'settings) *last-used-preset-path* name)
+    (setf (slot-value self 'current-preset-name) name)))
 
 
 
@@ -452,14 +453,6 @@ If no name provided save the default preset"
           (mediaimport.ui.presets:create-default-preset
            settings edits checkboxes radioboxes)))))
 
-(defmethod current-preset-name ((self main-window))
-  "Returns the current selected preset name or nil if default"
-  (with-slots (presets-option-pane) self
-    (if (choice-selected-item-p
-         presets-option-pane
-         string.default-preset-visible-name)
-        nil 
-        (choice-selected-item presets-option-pane))))
 
 (defmethod restore-from-last-preset ((self main-window))
   "Restore the window state from last used preset or default"

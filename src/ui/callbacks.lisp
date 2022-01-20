@@ -46,7 +46,7 @@
                  ;; save the edit fields to the history
                  (save-edit-controls-history self)
                  ;; save preset
-                 (save-preset self (current-preset-name self))
+                 (save-preset self (main-window-current-preset-name self))
                  ;; toggle progress bar indication
                  (toggle-progress self t :end 1)
                  ;; start worker thread
@@ -206,7 +206,11 @@
   (with-slots (settings) self
     (let ((name (if (string= item string.default-preset-visible-name)
                     nil
-                    item)))
+                    item))
+          (old-name (main-window-current-preset-name self)))
+      ;; save old preset
+      (save-preset self old-name)
+      ;; load new preset
       (when-let (preset
                  (if name (mediaimport.ui.presets:preset-load
                            name 
