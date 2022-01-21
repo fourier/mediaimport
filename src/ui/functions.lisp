@@ -426,6 +426,7 @@ symbols in *settings-checkboxes*"
   "Save the current window state into preset.
 If no name provided save the default preset"
   (with-slots (settings) self
+    ;; Update the last preset used
     (set-value settings *last-used-preset-path* name)
     (let ((edits
            (mapcar (lambda (sym)

@@ -113,4 +113,7 @@ Possible templates:
   (open-folder-after . "Open folder after copy")
   (current . "Current")
   (default-preset-visible-name . "<<Default>>")
+  (reserved-preset-name . "This preset name is preserved for default preset")
+  (warning . "Warning")
+  (really-overwrite-preset . "Do you really want to overwrite existing preset with the same name?")
   )

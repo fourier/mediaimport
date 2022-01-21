@@ -194,8 +194,18 @@
 
 (defmethod on-new-preset-button (data (self main-window))
   "Save preset button handler"
+  (declare (ignore data))
   (when-let (name (preset-name-dialog string.default-preset-name))
-    (display-message name)))
+    (cond ((string= name string.default-preset-visible-name)
+           (display-message string.reserved-preset-name))
+          ((member name (mediaimport.ui.presets:list-presets (slot-value self 'settings)) :test #'string=)
+           (when (prompt-for-confirmation string.warning :question-string string.really-overwrite-preset)
+             (save-preset self name)
+             (fill-presets-list self)
+             (restore-from-last-preset self)))
+          (t (save-preset self name)
+             (fill-presets-list self)
+             (restore-from-last-preset self)))))
 
 (defmethod on-modify-presets-button (data (self main-window))
   "Manage presets button handler"
