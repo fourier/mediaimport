@@ -209,13 +209,37 @@
 
 (defmethod on-rename-preset-button (data (self main-window))
   "Rename preset button handler"
-  (declare (ignore data))  
-  (display-message (main-window-current-preset-name self)))
+  (declare (ignore data))
+  (let ((old-name (main-window-current-preset-name self)))
+    (when-let (name (preset-name-dialog (if old-name old-name string.default-preset-name)))
+      ;; first check if the name is the same as default name
+      (cond ((string= name string.default-preset-visible-name)
+             (display-message string.reserved-preset-name))
+            ;; next check if the name is ever changed
+            ((string= name old-name) nil)
+            ;; next check if the name is the same as some existing preset
+          ((member name (mediaimport.ui.presets:list-presets (slot-value self 'settings)) :test #'string=)
+           (when (prompt-for-confirmation string.warning :question-string string.really-overwrite-preset)
+             (delete-preset self old-name)
+             (save-preset self name)
+             (fill-presets-list self)
+             (restore-from-last-preset self)))
+          (t
+             (delete-preset self old-name)
+             (save-preset self name)
+             (fill-presets-list self)
+             (restore-from-last-preset self))))))
 
 (defmethod on-delete-preset-button (data (self main-window))
   "Rename preset button handler"
-  (declare (ignore data))  
-  (display-message (main-window-current-preset-name self)))
+  (declare (ignore data))
+  (when-let (name (main-window-current-preset-name self))
+    (let ((question (format nil string.really-want-delete-preset name)))
+      (when (prompt-for-confirmation string.warning :question-string question)
+        (delete-preset self name)
+        (fill-presets-list self)
+        (restore-from-last-preset self)))))
+        
 
 
 (defmethod on-preset-change-callback (item (self main-window))

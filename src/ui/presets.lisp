@@ -20,6 +20,7 @@
    load-default-preset
    create-default-preset
    create-preset
+   remove-preset
    load-presets))
 
 (in-package #:mediaimport.ui.presets)
@@ -154,7 +155,6 @@ Return nil if not found in registry"
           (set-value settings *presets-list-path*
                      (nreverse (cons name (nreverse presets-list)))))))))
 
-
 ;;----------------------------------------------------------------------------
 ;; Global functions related to presets
 ;;----------------------------------------------------------------------------
@@ -192,4 +192,15 @@ Return nil if not found in registry"
         for preset = (preset-load name settings)
         when preset
         collect preset))
+
+(defmethod remove-preset ((settings settings) name)
+  "Remove preset from the list"
+  (let ((registry-path
+         (concatenate 'string (create-path *presets-path* (md5string name)) "/"))
+        (presets-list (list-presets settings)))
+    ;; FIXME: This does not remove the registry item
+    (set-value settings registry-path nil)
+    (set-value settings *presets-list-path*
+               (remove-if (curry #'string= name) presets-list))))
+
 

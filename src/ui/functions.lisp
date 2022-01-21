@@ -454,6 +454,13 @@ If no name provided save the default preset"
           (mediaimport.ui.presets:create-default-preset
            settings edits checkboxes radioboxes)))))
 
+(defmethod delete-preset ((self main-window) name)
+  (with-slots (settings) self
+    (when-let ((last-name (get-value settings *last-used-preset-path*)))
+      (when (string= last-name name) ;; move to default
+        (set-value settings *last-used-preset-path* nil)))
+    (mediaimport.ui.presets:remove-preset settings name)))
+      
 
 (defmethod restore-from-last-preset ((self main-window))
   "Restore the window state from last used preset or default"

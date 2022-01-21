@@ -117,4 +117,5 @@ Possible templates:
   (reserved-preset-name . "This preset name is preserved for default preset")
   (warning . "Warning")
   (really-overwrite-preset . "Do you really want to overwrite existing preset with the same name?")
+  (really-want-delete-preset . "Do you really want to delete preset ~s ?")
   )
