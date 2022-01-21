@@ -340,10 +340,6 @@ symbols in *settings-checkboxes*"
     (when (and result (not (emptyp preset-name)))
       preset-name)))
 
-(defmethod initialize-instance :after ((self presets-window) &key &allow-other-keys)
-  "Constructor for the presets-window class"
-  )
-
 (defmethod get-ui-values ((self main-window))
   (let ((edits
          (mapcar (lambda (symb)
