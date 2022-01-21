@@ -189,8 +189,9 @@
    (presets-option-pane option-pane :title string.current :test-function #'string=
                         :selection-callback #'on-preset-change-callback
                         :callback-type :item-interface)
-   (new-preset-button push-button :text string.new-preset :callback 'on-new-preset-button)
-   (modify-presets-button push-button :text string.modify-presets :callback 'on-modify-presets-button)
+   (new-preset-button push-button :text string.new-preset-dots :callback 'on-new-preset-button)
+   (rename-preset-button push-button :text string.rename-preset-dots :callback 'on-rename-preset-button)
+   (delete-preset-button push-button :text string.delete-preset-dots :callback 'on-delete-preset-button)   
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
                    :visible-min-height '(:character 10)
@@ -224,7 +225,7 @@
                    :title string.settings
                    :title-position :frame)
    (presets-layout row-layout '(presets-option-pane 
-                                 new-preset-button modify-presets-button)
+                                 new-preset-button rename-preset-button delete-preset-button)
                    :columns 2
                    :title string.presets
                    :title-position :frame)
@@ -259,38 +260,5 @@
    :initial-focus 'input-directory-edit
    :help-callback 'on-main-window-tooltip
    :destroy-callback 'on-destroy))
-
-
-;;----------------------------------------------------------------------------
-;; Presets interface
-;;----------------------------------------------------------------------------
-
-(define-interface presets-window ()
-  ()
-  (:panes
-   (presets-list list-panel
-                 :visible-min-height '(character 4)
-                 :visible-min-width '(character 20))
-   (load push-button 
-           :text "Load"
-           :selection-callback 'on-presets-load-preset)
-   (delete push-button 
-           :text "Delete..."
-           :selection-callback 'on-presets-delete-preset)
-   (rename push-button
-           :text "Rename..."
-           :selection-callback 'on-presets-rename-preset)
-   (ok push-button
-       :text "Ok"
-       :selection-callback 'on-presets-rename-preset))
-  (:layouts
-   (buttons-layout column-layout
-                   '(load delete rename))
-   (main-layout row-layout
-                '(presets-list buttons-layout)
-                :internal-border 10))
-  (:default-initargs :title "Presets" :layout 'main-layout))
-
-
 
 

@@ -207,9 +207,16 @@
              (fill-presets-list self)
              (restore-from-last-preset self)))))
 
-(defmethod on-modify-presets-button (data (self main-window))
-  "Manage presets button handler"
-  (display (make-instance 'presets-window)))
+(defmethod on-rename-preset-button (data (self main-window))
+  "Rename preset button handler"
+  (declare (ignore data))  
+  (display-message (main-window-current-preset-name self)))
+
+(defmethod on-delete-preset-button (data (self main-window))
+  "Rename preset button handler"
+  (declare (ignore data))  
+  (display-message (main-window-current-preset-name self)))
+
 
 (defmethod on-preset-change-callback (item (self main-window))
   "Called when the user changes the preset in dropdown list"
