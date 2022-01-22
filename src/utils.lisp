@@ -349,4 +349,5 @@ Linux (via xdg-open)"
   #+(and linux lispworks)
   (sys:call-system (list "/usr/bin/xdg-open" (string-to-base-string dirname)) :wait nil)
   #+sbcl
-  (error "Not implemented"))
+  (sb-ext:run-program "/usr/bin/xdg-open" (list dirname) :wait nil))
+

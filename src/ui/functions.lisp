@@ -215,7 +215,7 @@
     (file-candidate-color candidate)))
 
 
-(defmethod copy-files-thread-fun ((self main-window) items external-command delete-original &optional (open-folder nil))
+(defmethod copy-files-thread-fun ((self main-window) items external-command delete-original open-folder)
   "Worker function to copy/apply command to files.
 ITEMS is an array of FILE-CANDIDATE-ITEMs. EXTERNAL-COMMAND is a boolean flag;
 if T execute command from command-edit, otherwise just copy files"
@@ -258,8 +258,8 @@ if T execute command from command-edit, otherwise just copy files"
     ;; update progress, hide it and enable all buttons
     (toggle-progress self nil :end (length items))
     ;; and finally open folder if the setting requested
-;;    (when open-folder (open-folder
-))
+    (when open-folder
+      (open-folder (text-input-pane-text (slot-value self 'output-directory-edit))))))
 
 
 (defmethod toggle-progress ((self main-window) enable &key (start 0) end)
@@ -335,12 +335,18 @@ symbols in *settings-checkboxes*"
 
 
 (defun preset-name-dialog (suggested-name)
+  "Show a dialog asking for a preset name, providing SUGGESTED-NAME as a default string.
+Returns either string or NIL"
   (multiple-value-bind (preset-name result)
       (prompt-for-string string.preset-name :text suggested-name)
     (when (and result (not (emptyp preset-name)))
       preset-name)))
 
 (defmethod get-ui-values ((self main-window))
+  "Returns a list of 3 lists:
+- a list of conses  (symbol . string) for edit controls,
+- a list of symbols with checked values for checkboxes
+- a list of symbols with selected values for radioboxes"
   (let ((edits
          (mapcar (lambda (symb)
                    (cons symb (text-input-pane-text (slot-value self symb))))
@@ -474,7 +480,7 @@ If no name provided save the default preset"
       (use-preset self preset))))
 
 (defmethod fill-presets-list ((self main-window))
-  "Fill the presets option pane and select last selected"
+  "Fill the presets option pane"
   (with-slots (settings presets-option-pane) self
     (setf (collection-items presets-option-pane)
           (cons string.default-preset-visible-name
