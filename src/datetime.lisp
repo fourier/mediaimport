@@ -34,6 +34,11 @@
     (:en "December"  :ru "Декабрь"))
   :test #'equalp)
 
+(define-constant +invalid-exif-stream+
+                 "Invalid EXIF information")
+
+(define-constant +invalid-jpeg-stream+
+                 "Invalid JPEG file")
 
 (defstruct (datetime
             (:constructor create-datetime (year month date hour minute second))
@@ -87,7 +92,12 @@ The GPSTimeStamp is in format like #(18 29 299/10)"
 
 (defun make-datetime-from-exif (filename)
   "Create a datetime struct from the EXIF information contianing in
-the file FILENAME. If no EXIF found returns nil"
+the file FILENAME.
+Returns values:
+datetime error-description
+If EXIF found: datetime nil
+If no EXIF found: nil nil
+If error while parsing: nil string"
   (handler-case
       (let* ((exif (zpb-exif:make-exif (truename filename)))
              (exif-ht (alist-hash-table (zpb-exif:exif-alist exif) :test #'equal)))
@@ -104,14 +114,19 @@ the file FILENAME. If no EXIF found returns nil"
                 (gts (get-value "GPSTimeStamp")))
             ;; #(18 29 299/10)
             ;; logic the flowing:
-            (cond ((or dto dt dtd)
-                   ;; if DateTimeOriginal or DateTime or DateTimeDigitized, use it
-                   (make-datetime-from-string (or dto dt)))
-                  ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
-                   (make-datetime-from-gps-timestamps gds gts))))))
+            (values
+             (cond ((or dto dt dtd)
+                    ;; if DateTimeOriginal or DateTime or DateTimeDigitized, use it
+                    (make-datetime-from-string (or dto dt)))
+                   ((and gds gts) ;; if both GPSDateStamp and GPSTimeStamp
+                    (make-datetime-from-gps-timestamps gds gts)))
+             nil))))
     (zpb-exif:invalid-exif-stream (err)
       (declare (ignore err))
-      nil)))
+      (values nil +invalid-exif-stream+))
+    (zpb-exif:invalid-jpeg-stream (err)
+      (declare (ignore err))
+      (values nil +invalid-jpeg-stream+))))
 
 
 (defun datetime-string-month (dt &key short (locale :en))

@@ -7,8 +7,7 @@
 
 (defclass file-candidate-item (file-candidate)
   ((color :accessor file-candidate-color :initarg :color :initform :black)
-   (status :accessor file-candidate-status :initform nil)
-   (comment :accessor file-candidate-comment :initform "" :initarg :comment)))
+   (status :accessor file-candidate-status :initform nil)))
 
 (defmethod on-destroy ((self cocoa-application-interface))
   (with-slots (main-window) self
@@ -48,27 +47,28 @@
 
 
 (defmethod update-candidate-status ((self file-candidate-item))
-  (with-slots (color comment status) self
+  "Set the candidate color and comment depending on its status"
+  (with-slots (color status) self
     (cond ((eql status 'exists)
            (setf color :red
-                 comment string.status-alreay-exists))
+                 (file-candidate-comment self) string.status-alreay-exists))
           ((eql status 'duplicate)
            (setf color :red
-                 comment string.status-duplicate))
+                 (file-candidate-comment self) string.status-duplicate))
           ((eql status 'error)
            (setf color :red1
-                 comment string.status-error))
+                 (file-candidate-comment self) string.status-error))
           ((eql status 'copied)
            (setf color :blue
-                 comment string.status-copied))
+                 (file-candidate-comment self) string.status-copied))
           ((eql status 'processed)
            (setf color :blue
-                 comment string.status-processed))
+                 (file-candidate-comment self) string.status-processed))
           ((eql status 'skip)
            (setf color :grey))
           (t
            (setf color :black
-                 comment "")))))
+                 (file-candidate-comment self) "")))))
 
 
 (defun update-candidate (cand duplicates redisplay-function)
@@ -206,7 +206,10 @@
   (let ((target (file-candidate-target cand)))
     (list (file-candidate-source cand)
           (if target target string.skip)
-          (file-candidate-comment cand))))
+          (if (file-candidate-comment cand)
+              (file-candidate-comment cand)
+              ""))))
+
 
 
 (defun color-file-candidate (lp candidate state)

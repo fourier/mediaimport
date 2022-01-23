@@ -167,17 +167,29 @@ If the :use-exif flag is set in the class instance and the file is JPEG,
 try to get the EXIF information first for timestamp."
   (with-slots (destination-path pattern use-exif) self
     (let* ((ext (string-upcase (pathname-type input-filename)))
-           (timestamp (or (and (equal ext "JPG")
-                               use-exif
-                               (make-datetime-from-exif input-filename))
-                          (make-datetime-from-file input-filename)))
-           (fname (timestamp-based-filename input-filename
-                                            timestamp
-                                            pattern)))
-      (values 
-       (fad:merge-pathnames-as-file
-        (fad:pathname-as-directory destination-path) fname)
-       timestamp))))
+           comment
+           timestamp)
+      ;; First try to get exif timestamp or comment when error
+      (when (and (or (string= ext "JPG")
+                     (string= ext "JPEG"))
+                 use-exif)
+        (multiple-value-bind (ts error-comment)
+            (make-datetime-from-exif input-filename)
+          (setf timestamp ts
+                comment error-comment)))
+      ;; no timestamp or not jpeg - get the datetime from the file
+      (setf timestamp
+            (or timestamp
+                (make-datetime-from-file input-filename)))
+      ;; generate filename
+      (let ((fname (timestamp-based-filename input-filename
+                                             timestamp
+                                             pattern)))
+        (values 
+         (fad:merge-pathnames-as-file
+          (fad:pathname-as-directory destination-path) fname)
+         timestamp
+         comment)))))
 
 
 (defun integer-format (number digits)
@@ -329,12 +341,13 @@ and prepare a target name based on timestamp/etc information."
         ;; finally remove not acceptable files (reversing back since we've pushed
         ;; files into the fnames list and create file-candidate for every file name
         (mapcar (lambda (x)
-                  (multiple-value-bind (fname ts)
+                  (multiple-value-bind (fname ts comment)
                       (construct-target-filename self x)
                     (make-instance 'file-candidate
                                    :source x
                                    :target fname
-                                   :timestamp ts)))
+                                   :timestamp ts
+                                   :comment comment)))
                 (nreverse
                  (if filemasks 
                      (remove-if-not #'acceptable-file fnames)
