@@ -9,7 +9,7 @@
 
 (in-package #:mediaimport.version)
 
-(defparameter +version+ "v0.4")
+(defparameter +version+ "v0.5")
 
 (defun version-string ()
   +version+)

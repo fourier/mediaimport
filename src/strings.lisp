@@ -65,7 +65,7 @@
   (status-error . "Error")
   (status-copied . "Copied")
   (status-processed . "Processed")
-  (about-text . "Media Import utility ~a~%Copyright (c) 2016-2018 Alexey Veretennikov")
+  (about-text . "Media Import utility ~a~%Copyright (c) 2016-2022 Alexey Veretennikov")
   (dir-not-exists-fmt . "Directory ~s doesn't exist")
   (rename-dlg-fmt . "Rename ~a")
   (start-copy-confirmation . "Are you sure want to start copying?")
