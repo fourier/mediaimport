@@ -176,7 +176,7 @@
                    :selection-callback 'on-settings-checkbox-selected
                    :retract-callback 'on-settings-checkbox-retracted
                    :layout-class 'grid-layout
-                   :layout-args '(:columns 2))
+                   :layout-args '(:columns 3))
    (comparison-options-panel radio-button-panel
                  :title string.comparison-options
                  :title-position :frame

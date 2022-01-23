@@ -344,8 +344,7 @@ Linux (via xdg-open)"
   #+cocoa
   ;; this function implements the following from Cocoa:
   ;; [[NSWorkspace sharedWorkspace] selectFile:nil inFileViewerRootedAtPath:DIRNAME];
-  ;; NOT TESTED! TODO: Test it
-  (objc:invoke (objc:invoke "NSWorkspace" "sharedWorkspace") "selectFile:" nil "inFileViewerRootedAtPath:" dirname)
+  (objc:invoke (objc:invoke "NSWorkspace" "sharedWorkspace") "selectFile:inFileViewerRootedAtPath:" nil dirname)
   #+(and linux lispworks)
   (sys:call-system (list "/usr/bin/xdg-open" (string-to-base-string dirname)) :wait nil)
   #+sbcl
