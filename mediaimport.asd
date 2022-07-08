@@ -10,7 +10,8 @@
                #:ironclad
                #:ppath
                #:split-sequence
-               #:zpb-exif)
+               #:zpb-exif
+               #+lispworks #:lw-settings)
   :serial t
   :components ((:module "src"
                 :serial t

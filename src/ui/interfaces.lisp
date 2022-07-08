@@ -116,13 +116,7 @@
   ;; slots
   ((application-interface :initarg :application-interface)
    (duplicates :initform nil)
-   (settings :initform (make-instance
-                        'settings
-                        ;; TODO: Implement settings upgrade. Otherwise we always
-                        ;; save on the same version.
-                        :application-name "MediaImport" :application-version "1.0"
-                        ;;(mediaimport.version:version-string)
-                        )
+   (settings :initform (make-app-settings)
              :reader main-window-settings)
    (current-preset-name :initform nil :reader main-window-current-preset-name
                         :documentation "Currently selected preset name. If nil it is the default preset"))

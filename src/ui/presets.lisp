@@ -109,7 +109,7 @@ Based on ppath:join"
     (setf registry-path
           (create-path registry-base-path (md5string (preset-name self))))))
 
-(defmethod preset-load ((name string) (settings settings) &optional (base-path *presets-path*))
+(defmethod preset-load ((name string) (settings lw.settings:settings) &optional (base-path *presets-path*))
   "Populate the preset from settings, or leave defaults.
 Return nil if not found in registry"
   (let* ((md5name (md5string name))
@@ -131,7 +131,7 @@ Return nil if not found in registry"
         ;; return value
         preset))))
 
-(defmethod preset-save ((preset preset) (settings settings))
+(defmethod preset-save ((preset preset) (settings lw.settings:settings))
   "Save the preset to settings"
   (with-slots (name edits checkboxes radioboxes registry-path registry-base-path)
       preset
@@ -159,15 +159,15 @@ Return nil if not found in registry"
 ;; Global functions related to presets
 ;;----------------------------------------------------------------------------
 
-(defmethod list-presets ((settings settings))
+(defmethod list-presets ((settings lw.settings:settings))
   "Return the list of current preset names from settings"
   (get-value settings *presets-list-path*))
 
-(defmethod load-default-preset ((settings settings))
+(defmethod load-default-preset ((settings lw.settings:settings))
   "Load the default preset or NIL if not found"
   (preset-load *presets-default-preset-name* settings *presets-default-path*))
 
-(defmethod create-default-preset ((settings settings) edits checkboxes radioboxes)
+(defmethod create-default-preset ((settings lw.settings:settings) edits checkboxes radioboxes)
   "Creates and saves the default preset with values provided"
   (let ((default
          (make-instance 'preset :name *presets-default-preset-name*
@@ -177,7 +177,7 @@ Return nil if not found in registry"
                         :base-path *presets-default-path*)))
     (preset-save default settings)))
 
-(defmethod create-preset ((settings settings) name edits checkboxes radioboxes)
+(defmethod create-preset ((settings lw.settings:settings) name edits checkboxes radioboxes)
   "Creates and saves the preset with then name and values provided"
   (let ((new-preset
          (make-instance 'preset :name name
@@ -186,14 +186,14 @@ Return nil if not found in registry"
                         :radioboxes radioboxes)))
     (preset-save new-preset settings)))
 
-(defmethod load-presets ((settings settings))
+(defmethod load-presets ((settings lw.settings:settings))
   "Return the list of presets, without default"
   (loop for name in (list-presets settings)
         for preset = (preset-load name settings)
         when preset
         collect preset))
 
-(defmethod remove-preset ((settings settings) name)
+(defmethod remove-preset ((settings lw.settings:settings) name)
   "Remove preset from the list"
   (let ((registry-path
          (concatenate 'string (create-path *presets-path* (md5string name)) "/"))

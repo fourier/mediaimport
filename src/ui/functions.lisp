@@ -38,7 +38,7 @@
 
 (defmethod top-level-interface-geometry-key ((self main-window))
   "Sets the key to read/write geometry position"
-  (values :geometry-settings (product (slot-value self 'settings))))
+  (values :geometry-settings (product-name (slot-value self 'settings))))
 
 
 (defmethod top-level-interface-save-geometry-p ((self main-window))

@@ -1,0 +1,3 @@
+[submodule "modules/lw-settings"]
+	path = modules/lw-settings
+	url = git@github.com:fourier/lw-settings.git
