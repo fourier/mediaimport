@@ -488,3 +488,56 @@ If no name provided save the default preset"
     (setf (collection-items presets-option-pane)
           (cons string.default-preset-visible-name
                 (mediaimport.ui.presets:list-presets settings)))))
+
+(defun make-candidates-menu (pane object x y)
+  (declare (ignore object x y))
+  ;; make menu only when non empty and selected
+  (when-let ((items (choice-selected-items
+                     (slot-value (capi:element-interface pane) ;; main-window
+                                 'proposal-table))))
+    (let* ((menu-items
+            (list
+             (make-instance 'capi:menu-item :title
+                            (if (null (cdr items)) ;; only one element
+                                (concatenate 'string string.open
+                                             " "
+                                             (ppath:basename
+                                              (namestring
+                                               (file-candidate-source (car items)))))
+                                string.open-selected)
+                            :callback 'on-candidates-menu-open
+                            :callback-type :interface)
+             (make-instance 'capi:menu-item :title string.copy-to-clipboard
+                            :callback 'on-candidates-menu-copy
+                            :callback-type :interface)
+             (make-instance 'capi:menu-item :title string.rename-target-dots
+                            :callback 'on-candidates-menu-rename
+                            :callback-type :interface)
+             (make-instance 'capi:menu-item :title string.delete-from-list
+                            :callback 'on-candidates-menu-delete
+                            :callback-type :interface))))
+      ;; insert "Open target" menu item when only one
+      ;; selected and it has a conflicting target
+      (let ((item (car items)))
+        (when (and (null (cdr items))
+                   (eql  'exists (file-candidate-status item)))
+          (setf menu-items
+                (cons (car menu-items)
+                      (cons
+                       (make-instance
+                        'capi:menu-item :title
+                        (concatenate 'string string.open-target
+                                     " "
+                                     (ppath:basename
+                                      (namestring
+                                       (file-candidate-source item))))
+                        :callback-type :interface
+                        :callback
+                        (lambda (window)
+                          (declare (ignore window))
+                          (view-file
+                           (file-candidate-target item))))
+                       (cdr menu-items))))))
+      (make-instance 'capi:menu
+                     :items
+                     menu-items))))

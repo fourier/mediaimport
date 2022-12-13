@@ -42,6 +42,8 @@
   (select-all . "Select All")
   (candidates . "Candidates")
   (open . "Open")
+  (open-target . "Open Target")
+  (open-selected . "Open Selected")
   (copy-to-clipboard . "Copy to clipboard")
   (delete-from-list . "Delete from the list")
   (choose-input . "From Directory")

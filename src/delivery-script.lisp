@@ -23,6 +23,9 @@
 ;; Extend the stack size to be able to load all dependencies
 (hcl:extend-current-stack 400)
 
+;; make folder selection dialog look modern
+#+mswindows (require "shell-objs")
+
 ;;; Load the application:
 
 (ql:quickload :mediaimport)

@@ -120,23 +120,6 @@
              :reader main-window-settings)
    (current-preset-name :initform nil :reader main-window-current-preset-name
                         :documentation "Currently selected preset name. If nil it is the default preset"))
-  
-  (:menus
-   ;; pop-up menu in the list of candidates
-   (candidates-menu
-    string.candidates
-    ((string.open
-      :callback 'on-candidates-menu-open
-      :callback-type :interface)
-     (string.copy-to-clipboard
-      :callback 'on-candidates-menu-copy
-      :callback-type :interface)
-     (string.rename-target-dots
-      :callback 'on-candidates-menu-rename
-      :callback-type :interface)
-     (string.delete-from-list
-      :callback 'on-candidates-menu-delete
-      :callback-type :interface))))
 
   ;; ui elements
   (:panes
@@ -188,14 +171,14 @@
    (delete-preset-button push-button :text string.delete-preset-dots :callback 'on-delete-preset-button)   
    (proposal-table multi-column-list-panel
                    :visible-min-width '(:character 100)
-                   :visible-min-height '(:character 10)
+                   :visible-min-height '(:character 2)
                    :callback-type :item-interface ;; arguments to callback: item and interface
                    :header-args (list :selection-callback :sort) ;; "magic" callback tells it to use the sort descriptions
                    :sort-descriptions +proposal-table-sorting-types+
                    :column-function 'file-candidate-to-row
                    :color-function 'color-file-candidate
                    :action-callback 'on-candidate-dblclick
-                   :pane-menu candidates-menu
+                   :pane-menu #'make-candidates-menu
                    :interaction :extended-selection
                    :columns `((:title ,string.from-column 
                                :adjust :left
@@ -250,6 +233,8 @@
   (:default-initargs
    :title string.application-name
    :visible-min-width 800
+   ;; TODO: implement message area logging
+   ;; :message-area t
    :layout 'main-layout
    :initial-focus 'input-directory-edit
    :help-callback 'on-main-window-tooltip
