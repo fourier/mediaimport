@@ -15,8 +15,8 @@
 
 (in-package #:mediaimport.settings)
 
-(define-constant +company+ "com.github.fourier")
-(define-constant +application-name+ "MediaImport")
+(define-constant +company+ "com.github.fourier" :test #'string=)
+(define-constant +application-name+ "MediaImport" :test #'string=)
 
 (defun make-app-settings ()
   (lw.settings:make-settings +application-name+ +company+ (mediaimport.version:version-string)))
