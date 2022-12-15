@@ -18,6 +18,7 @@
                 :components
                 ((:file "version")
                  #+lispworks(:file "settings")
+                 #+lispworks(:file "logger")
                  (:file "utils")
                  (:file "strings")
                  (:file "datetime")

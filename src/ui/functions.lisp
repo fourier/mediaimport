@@ -23,7 +23,9 @@
 (defmethod initialize-instance :after ((self main-window) &key &allow-other-keys)
   "Constructor for the main-window class"
   (with-slots (copy-button) self
-    ;; First disable UI elements
+    ;; Create logger
+    (create-logger self)
+    ;; Disable UI elements
     (setf (button-enabled copy-button) nil)
     (toggle-custom-command self nil)
     ;; Populate presets dropdown list
@@ -44,6 +46,17 @@
 (defmethod top-level-interface-save-geometry-p ((self main-window))
   "Returns true if need to save geometry"
   t)
+
+(defmethod create-logger ((self main-window))
+  "Creates a logger writing to the message status bar"
+  (mediaimport.logger:logger-init
+   #'(lambda (text)
+       ;; write text from logger thread into the window thread
+       (execute-with-interface-if-alive
+        self
+        #'(lambda ()
+            (setf (titled-object-message self) text)))
+       (values))))
 
 
 (defmethod update-candidate-status ((self file-candidate-item))

@@ -234,7 +234,7 @@
    :title string.application-name
    :visible-min-width 800
    ;; TODO: implement message area logging
-   ;; :message-area t
+   :message-area t
    :layout 'main-layout
    :initial-focus 'input-directory-edit
    :help-callback 'on-main-window-tooltip
