@@ -35,10 +35,12 @@
   :test #'equalp)
 
 (define-constant +invalid-exif-stream+
-                 "Invalid EXIF information")
+  "Invalid EXIF information"
+  :test #'string=)
 
 (define-constant +invalid-jpeg-stream+
-                 "Invalid JPEG file")
+  "Invalid JPEG file"
+  :test #'string=)
 
 (defstruct (datetime
             (:constructor create-datetime (year month date hour minute second))
