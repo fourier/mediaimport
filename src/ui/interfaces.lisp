@@ -237,7 +237,7 @@
    :message-area t
    :layout 'main-layout
    :initial-focus 'input-directory-edit
-   :help-callback 'on-main-window-tooltip
-   :destroy-callback 'on-destroy))
+   :help-callback #'on-main-window-tooltip
+   :destroy-callback #'on-destroy))
 
 

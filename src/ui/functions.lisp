@@ -49,7 +49,7 @@
 
 (defmethod create-logger ((self main-window))
   "Creates a logger writing to the message status bar"
-  (mediaimport.logger:logger-init
+  (mediaimport.logger:logger-start
    #'(lambda (text)
        ;; write text from logger thread into the window thread
        (execute-with-interface-if-alive

@@ -115,6 +115,9 @@
 (defmethod on-destroy ((self main-window))
   "Callback called when closing the main window"
   (with-slots (application-interface) self
+    ;; close the logger
+    (mediaimport.logger:logger-stop)
+    ;; application-interface only exists on Cocoa OSX
     (when application-interface
       ;; Set main-window to nil to prevent recursion back from
       ;; application-interface's destroy-callback.
