@@ -19,6 +19,7 @@
                 ((:file "version")
                  #+lispworks(:file "settings")
                  #+lispworks(:file "logger")
+                 #+lispworks(:file "worker-process")
                  (:file "utils")
                  (:file "strings")
                  (:file "datetime")
