@@ -1,4 +1,4 @@
-#| worker-process.lisp
+#| worker.lisp
 
   This file is a part of mediaimport project.
 
@@ -6,7 +6,7 @@
 |#
 (in-package :cl-user)
 
-(defpackage :mediaimport.worker-process
+(defpackage :mediaimport.worker
   (:documentation "Worker process package")
   (:use :cl)
   (:add-use-defaults t)
@@ -16,11 +16,11 @@
    worker-shedule))
 
 
-(in-package mediaimport.worker-process)
+(in-package mediaimport.worker)
 
-(defclass worker-process ()
+(defclass worker ()
   ((process :documentation "Worker thread/process"
-            :reader worker-process-process
+            :reader worker-process
             :initform nil)
    (name :initarg name
          :initform "Worker"
@@ -30,7 +30,7 @@
     :initform #'(lambda (arg) (declare (ignore arg)) (values))
     :documentation "Callback (1 arg) to be called when event appears in a queue")))
 
-(defmethod initialize-instance :after ((self worker-process) &key)
+(defmethod initialize-instance :after ((self worker) &key)
   (with-slots (process name) self
     (setf process
           (mp:process-run-function
@@ -39,7 +39,7 @@
            #'worker-main self))))
     
 
-(defmethod worker-main ((self worker-process))
+(defmethod worker-main ((self worker))
   "Main worker thread. Wait for the messages from the mailbox"
   (with-slots (process event-action) self
     (let ((mb (mp:process-mailbox process)))
@@ -51,13 +51,13 @@
             else
             return nil))))
 
-(defmethod worker-stop ((self worker-process))
+(defmethod worker-stop ((self worker))
   "Stop the worker process"
   (when (worker-running-p self)
-    (mp:process-send (worker-process-process self) nil)))
+    (mp:process-send (worker-process self) nil)))
 
-(defmethod worker-running-p ((self worker-process))
+(defmethod worker-running-p ((self worker))
   "Return T if the logger process is initialized and accepting messages"
-  (and (not (null (worker-process-process self)))
-       (eql (mp:process-state (worker-process-process self)) :active)))
+  (and (not (null (worker-process self)))
+       (eql (mp:process-state (worker-process self)) :active)))
    
