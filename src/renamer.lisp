@@ -323,35 +323,37 @@ file or bumped files based on FILENAME"
                      files))))
 
 
+(defun acceptable-file-p (fname filemasks)
+  "Predicate which identifies if the filename is acceptable,
+i.e. complies to any of file masks"
+  (let ((short-name (file-namestring fname)))
+    (some (lambda (x) (ppcre:scan x short-name)) filemasks)))
+
+
 (defmethod create-potential-file-candidates ((self renamer))
   "Create a preliminary list of file candidates.
 This function iterates over all files, selecting those matching filemasks
 and prepare a target name based on timestamp/etc information."
   (with-slots (source-path filemasks recursive) self
-    ;; predicate which identifies if the filename is acceptable,
-    ;; i.e. complies to any of file masks
-    (flet ((acceptable-file (fname)
-             (let ((short-name (file-namestring fname)))
-               (some (lambda (x) (ppcre:scan x short-name)) filemasks))))
-      (let (fnames)
-        ;; collect list of all filenames into the fnames list
-        (if recursive
-            (fad:walk-directory source-path (lambda (x) (push x fnames)))
-            (setf fnames (remove-if #'fad:directory-pathname-p (fad:list-directory source-path))))
-        ;; finally remove not acceptable files (reversing back since we've pushed
-        ;; files into the fnames list and create file-candidate for every file name
-        (mapcar (lambda (x)
-                  (multiple-value-bind (fname ts comment)
-                      (construct-target-filename self x)
-                    (make-instance 'file-candidate
-                                   :source x
-                                   :target fname
-                                   :timestamp ts
-                                   :comment comment)))
-                (nreverse
-                 (if filemasks 
-                     (remove-if-not #'acceptable-file fnames)
-                     fnames)))))))
+    (let (fnames)
+      ;; collect list of all filenames into the fnames list
+      (if recursive
+          (fad:walk-directory source-path (lambda (x) (push x fnames)))
+          (setf fnames (remove-if #'fad:directory-pathname-p (fad:list-directory source-path))))
+      ;; finally remove not acceptable files (reversing back since we've pushed
+      ;; files into the fnames list and create file-candidate for every file name
+      (mapcar (lambda (x)
+                (multiple-value-bind (fname ts comment)
+                    (construct-target-filename self x)
+                  (make-instance 'file-candidate
+                                 :source x
+                                 :target fname
+                                 :timestamp ts
+                                 :comment comment)))
+              (nreverse
+               (if filemasks
+                   (remove-if-not (rcurry #'acceptable-file-p filemasks) fnames)
+                   fnames))))))
 
 
 (defmethod verify-against-existing ((self renamer) candidates &key progress-fun)
@@ -461,7 +463,7 @@ this table first and add if not found"
            (:crc 
             ;; we have to check checksum
             (let ((cs1 (get-and-cache-checksum filename1))
-                  (cs2 (get-and-cache-checksum filename1)))
+                  (cs2 (get-and-cache-checksum filename2)))
               (equalp cs1 cs2)))
            (:binary
             (compare-files-binary filename1 filename2))))))
