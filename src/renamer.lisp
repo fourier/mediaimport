@@ -2,7 +2,9 @@
 (defpackage #:mediaimport.renamer
   (:documentation "Application logic related to searching and renaming")
   (:use #:cl #:alexandria
-        #:mediaimport.utils #:mediaimport.datetime #:mediaimport.strings)
+        #:mediaimport.utils
+        #:mediaimport.datetime
+        #:mediaimport.strings)
   (:export
    file-candidate-target
    validate-command-string
@@ -17,25 +19,55 @@
 
 (in-package #:mediaimport.renamer)
 
+
+(defparameter +file-block-size+ 4096
+  "The block size to read from the file")
+
 (defvar +timestamp-format-mapping+
-  (make-hash-table :test #'equal)
+  (alist-hash-table
+   `(("{YYYY}"             .  ("~4,'0d" . datetime-year))
+     ("{MM}"               . ("~2,'0d" . datetime-month))
+     ("{MONTH}"            . ("~a" . datetime-string-month))
+     ("{MON}"              . ("~a" . ,(lambda (x) (datetime-string-month x :short t))))
+     ("{МЕСЯЦ}" . ("~a" . ,(lambda (x) (datetime-string-month x :locale :ru))))
+     ("{МЕС}"     . ("~a" . ,(lambda (x) (datetime-string-month x :short t :locale :ru))))
+     ("{DD}"               . ("~2,'0d" . datetime-date))
+     ("{hh}"               . ("~2,'0d"  . datetime-hour))
+     ("{mm}"               . ("~2,'0d" . datetime-minute))
+     ("{ss}"               . ("~2,'0d" . datetime-second)))
+   :test #'equal)
   "Hash table containing mapping between timestamp pseudo-formatting
 and (FORMAT formatting + getter function)")
 
+(declaim (ftype (function (t) t) file-candidate-source))
+(declaim (ftype (function (t) t) file-candidate-target))
+
 (defvar +command-format-mapping+
-  (make-hash-table :test #'equal)
+  (alist-hash-table
+   `(("{SOURCE}" .  ("~s" . ,(compose #'namestring #'file-candidate-source)))
+     ("{TARGET}" .  ("~s" . ,(compose #'namestring #'file-candidate-target))))
+   :test #'equal)
   "Hash table containing mapping between command pseudo-formatting
 and (FORMAT formatting + getter function")
 
 
-(defparameter +file-block-size+ 4096
-  "The block size to read from the file")
+#|
+(defvar +command-format-mapping+
+  (let ((ht (make-hash-table :test #'equal)))
+    (loop for (key . value) in
+          `(("{SOURCE}" .  ("~s" . ,(compose #'namestring #'file-candidate-source)))
+            ("{TARGET}" .  ("~s" . ,(compose #'namestring #'file-candidate-target))))
+          do (setf (gethash key ht) value))
+    ht))
+
+|#
 
 (defclass file-candidate ()
   ((source :accessor file-candidate-source :initarg :source
            :documentation "Source file (file to copy)")
    (target :accessor file-candidate-target :initarg :target
            :documentation "Target file (file to copy to)")
+   ;; TODO: investigate if it is needed. Doesn't seem to be used
    (timestamp :accessor file-candidate-timestamp :initarg :timestamp
            :documentation "Timestamp of the source file")
    (comment :accessor file-candidate-comment :initarg :comment :initform ""
@@ -49,40 +81,6 @@ the input and output file name as well as the source file timestamp"))
     (format out "~%   Source: ~s" (file-candidate-source self))
     (format out "~%   Target: ~s" (file-candidate-target self))
     (format out "~%   Comment: ~s" (file-candidate-comment self))))
-
-
-;; fill the +timestamp-format-mapping+ and +command-format-mapping+
-;;(eval-when (:compile-toplevel :load-toplevel :execute)
-  (setf +timestamp-format-mapping+
-        (clrhash +timestamp-format-mapping+))
-  (setf (gethash "{YYYY}" +timestamp-format-mapping+)
-        (cons "~4,'0d" #'datetime-year)
-        (gethash "{MM}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-month)
-        (gethash "{MONTH}" +timestamp-format-mapping+)
-        (cons "~a" #'datetime-string-month)
-        (gethash "{MON}" +timestamp-format-mapping+)
-        (cons "~a" (lambda (x) (datetime-string-month x :short t)))
-        (gethash "{МЕСЯЦ}" +timestamp-format-mapping+)
-        (cons "~a" (lambda (x) (datetime-string-month x :locale :ru)))
-        (gethash "{МЕС}" +timestamp-format-mapping+)
-        (cons "~a" (lambda (x) (datetime-string-month x :short t :locale :ru)))
-        (gethash "{DD}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-date)
-        (gethash "{hh}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-hour)
-        (gethash "{mm}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-minute)
-        (gethash "{ss}" +timestamp-format-mapping+)
-        (cons "~2,'0d" #'datetime-second))
-  (setf +command-format-mapping+
-        (clrhash +command-format-mapping+))
-  (setf (gethash "{SOURCE}" +command-format-mapping+)
-        (cons "~s" (compose #'namestring #'file-candidate-source))
-        (gethash "{TARGET}" +command-format-mapping+)
-        (cons "~s" (compose #'namestring #'file-candidate-target)));)
-        
-
 
 
 (defclass renamer () ((source-path :initarg :source-path
@@ -137,6 +135,17 @@ Example:
 => (format-timestamp-string \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.JPG\" (make-datetime-from-string \"2011:01:02 13:28:33333\"))
 \"2011-01-02/Photo-13_28.JPG\""
   (format-string pattern ts +timestamp-format-mapping+))
+
+
+(defun format-command-string (pattern cand)
+  "Creates a formatted string from given pattern and candidate.
+Formatting arguments:
+{SOURCE} - source file
+{TARGET} - target file
+Example:
+=> (format-command-string \"gcc {SOURCE} -o {TARGET}\" (make-instance 'file-candidate :source \"myfile.c\" :target \"myfile.o\"))
+=> "
+  (format-string pattern cand +command-format-mapping+))
 
 
 (defun timestamp-based-filename (filename timestamp pattern)
@@ -537,16 +546,6 @@ DELETE-ORIGINAL if t remove the original file"
      (length file-candidates)))
 
 
-(defun format-command-string (pattern cand)
-  "Creates a formatted string from given pattern and candidate.
-Formatting arguments:
-{SOURCE} - source file
-{TARGET} - target file
-Example:
-=> "
-  (format-string pattern cand +command-format-mapping+))
-
-
 (defun validate-command-string (pattern)
   "Validate the PATTERN for command to be applied to file candidates.
 Will return VALUES (result, error-text), where RESULT is t if the
@@ -555,6 +554,7 @@ Will return VALUES (result, error-text), where RESULT is t if the
     (if (not (member "{SOURCE}" matches :test #'string=))
         (values nil string.source-not-provided)
         t)))
+
 
 (defun apply-command-to-files (file-candidates command-pattern
                                                &key
@@ -575,7 +575,8 @@ DELETE-ORIGINAL if t remove the original file"
             (result 0)
             (command ""))
        (when (and stream (file-candidate-target cand))
-         (setf command (format-command-string command-pattern cand)
+         (setf command
+               (format-command-string command-pattern cand)
                result (if (not script)
                           #-:lispworks
                           (asdf/driver:run-program
