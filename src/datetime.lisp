@@ -42,6 +42,29 @@
   "Invalid JPEG file"
   :test #'string=)
 
+(define-constant +datetime-pattern-to-regexp+
+                 (alist-hash-table
+                  `(("{YYYY}"   .   "(19|20)[0-9][0-9]")
+                    ("{MM}"     .   "(0[1-9])|(1[0-2])")
+                    ("{DD}"     .   "(0[1-9])|(1[0-9])|(2[0-9])|(3[0-1])")
+                    ("{hh}"     .   "(0[0-9])|(1[0-9])|(2[0-3])")
+                    ("{mm}"     .   "[0-5][0-9]")
+                    ("{ss}"     .   "[0-5][0-9]")
+                    ("{MONTH}"  .   ,(format nil "~{~a~^|~}"
+                                             (loop for x across +months+
+                                                   collect (getf x :en))))
+                    ("{MON}"    .   ,(format nil "~{~a~^|~}"
+                                             (loop for x across +months+
+                                                   collect (subseq (getf x :en) 0 3))))
+                    ("{МЕСЯЦ}" . ,(format nil "~{~a~^|~}"
+                                                     (loop for x across +months+
+                                                           collect (getf x :ru))))
+                    ("{МЕС}"     .  ,(format nil "~{~a~^|~}"
+                                                      (loop for x across +months+
+                                                            collect (subseq (getf x :ru) 0 3)))))
+                  :test #'equal))
+
+
 (defstruct (datetime
             (:constructor create-datetime (year month date hour minute second))
             (:constructor))
@@ -131,10 +154,13 @@ If error while parsing: nil string"
       (values nil +invalid-jpeg-stream+))))
 
 
+(defun get-month-string (month-num &key short (locale :en))
+  "month-num 1..12"
+  (let ((result 
+         (getf (aref mediaimport.datetime::+months+ (1- month-num)) locale)))
+    (if short (subseq result 0 3) result)))
+
+
 (defun datetime-string-month (dt &key short (locale :en))
   "Return textual representation of the month"
-  (let* ((month (datetime-month dt))
-         (result 
-          (getf (aref mediaimport.datetime::+months+ (1- month)) locale)))
-    (if short (subseq result 0 3) result)))
-        
+  (get-month-string (datetime-month dt) :short short :locale locale))
