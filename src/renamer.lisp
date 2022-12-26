@@ -15,6 +15,7 @@
    apply-command-to-files
    file-candidate
    file-candidate-timestamp
+   bump-to-next-available-candidate
    copy-files))
 
 (in-package #:mediaimport.renamer)
@@ -384,8 +385,17 @@ file names."
               (setf (file-candidate-target cand)
                     (bump-file-name target (1+ (or (get-maximum-file-version similar) 0))))))))
       candidates)))
-              
 
+(defmethod bump-to-next-available-candidate (candidate candidates)
+  "Try to bump the target for candidate to the next available either not present in a list of files
+or not present on a disk"
+  (let* ((target (file-candidate-target candidate))
+         (hash-candidates (make-hash-table :test #'equalp)))
+    (loop for cand across candidates do (setf (gethash (file-candidate-target cand) hash-candidates) t))
+    (loop for new-target = target then (bump-file-name new-target)
+          while (or (gethash new-target hash-candidates) (cl-fad:file-exists-p new-target))
+          finally (setf (file-candidate-target candidate) new-target))))
+  
 (defmethod bump-similar-candidates ((self renamer) candidates)
   "For each candidate if there is another candidates with the same name, bump
 all of them"
