@@ -51,17 +51,6 @@ and (FORMAT formatting + getter function)")
 and (FORMAT formatting + getter function")
 
 
-#|
-(defvar +command-format-mapping+
-  (let ((ht (make-hash-table :test #'equal)))
-    (loop for (key . value) in
-          `(("{SOURCE}" .  ("~s" . ,(compose #'namestring #'file-candidate-source)))
-            ("{TARGET}" .  ("~s" . ,(compose #'namestring #'file-candidate-target))))
-          do (setf (gethash key ht) value))
-    ht))
-
-|#
-
 (defclass file-candidate ()
   ((source :accessor file-candidate-source :initarg :source
            :documentation "Source file (file to copy)")

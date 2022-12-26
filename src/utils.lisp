@@ -182,10 +182,12 @@ occurences of items in the array/list"
       (values (if (not result) nil (> value 1)) result))))
 
 
-(defun wildcard-to-regex (wildcard &key case-sensitive-p)
+(defun wildcard-to-regex (wildcard &key case-sensitive-p (escape-special-p t))
   "Convert file wildcards to regular expressions. By default the regular
 expression is case insensitive. This is regulated by keyword argument
 CASE-SENSITIVE-P
+If ESCAPE-SPECIAL-P is t (by default), escape symbols like dot, braces etc
+from +regex-escape-chars+ array.
 Example:
 => (mediaimport.utils:wildcard-to-regex \"Photo*.jpg\") 
 \"(?i)^Photo.*\\\\.jpg$\""
@@ -213,7 +215,7 @@ Example:
                        (vector-push-extend #\* regex)))
                     ((eq char #\?)
                      (vector-push-extend #\. regex))
-                    ((find char +regex-escape-chars+)
+                    ((and escape-special-p (find char +regex-escape-chars+))
                      (progn
                        (vector-push-extend #\\ regex)
                        (vector-push-extend char regex)))

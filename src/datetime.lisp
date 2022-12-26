@@ -42,26 +42,28 @@
   "Invalid JPEG file"
   :test #'string=)
 
-(define-constant +datetime-pattern-to-regexp+
+(declaim (ftype (function (t) t) month-name-to-number))
+
+(define-constant +datetime-pattern-mapping+
                  (alist-hash-table
-                  `(("{YYYY}"   .   "(19|20)[0-9][0-9]")
-                    ("{MM}"     .   "(0[1-9])|(1[0-2])")
-                    ("{DD}"     .   "(0[1-9])|(1[0-9])|(2[0-9])|(3[0-1])")
-                    ("{hh}"     .   "(0[0-9])|(1[0-9])|(2[0-3])")
-                    ("{mm}"     .   "[0-5][0-9]")
-                    ("{ss}"     .   "[0-5][0-9]")
-                    ("{MONTH}"  .   ,(format nil "~{~a~^|~}"
-                                             (loop for x across +months+
-                                                   collect (getf x :en))))
-                    ("{MON}"    .   ,(format nil "~{~a~^|~}"
-                                             (loop for x across +months+
-                                                   collect (subseq (getf x :en) 0 3))))
-                    ("{МЕСЯЦ}" . ,(format nil "~{~a~^|~}"
-                                                     (loop for x across +months+
-                                                           collect (getf x :ru))))
-                    ("{МЕС}"     .  ,(format nil "~{~a~^|~}"
-                                                      (loop for x across +months+
-                                                            collect (subseq (getf x :ru) 0 3)))))
+                  `(("{YYYY}"   .   (:re "((?:19|20)[0-9][0-9])" :convert identity :kw :year))
+                    ("{MM}"     .   (:re "((?:0[1-9])|(?:1[0-2]))" :convert identity :kw :month))
+                    ("{DD}"     .   (:re "((?:0[1-9])|(?:1[0-9])|(?:2[0-9])|(?:3[0-1]))" :convert identity :kw :day))
+                    ("{hh}"     .   (:re "((?:0[0-9])|(?:1[0-9])|(?:2[0-3]))" :convert identity :kw :hour))
+                    ("{mm}"     .   (:re "([0-5][0-9])" :convert identity :kw :minute))
+                    ("{ss}"     .   (:re "([0-5][0-9])" :convert identity :kw :second))
+                    ("{MONTH}"  .   (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (getf x :en)))
+                                     :convert ,(lambda (x) (month-name-to-number x :short nil :locale :en))
+                                     :kw :month))
+                    ("{MON}"    .   (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (subseq (getf x :en) 0 3)))
+                                     :convert ,(lambda (x) (month-name-to-number x :short t :locale :en))
+                                     :kw :month))
+                    ("{МЕСЯЦ}" . (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (getf x :ru)))
+                                             :convert ,(lambda (x) (month-name-to-number x :short t :locale :en))
+                                             :kw :month))
+                    ("{МЕС}"     . (:re,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (subseq (getf x :ru) 0 3)))
+                                             :convert ,(lambda (x) (month-name-to-number x :short t :locale :en))
+                                             :kw :month)))
                   :test #'equal))
 
 
@@ -153,9 +155,33 @@ If error while parsing: nil string"
       (declare (ignore err))
       (values nil +invalid-jpeg-stream+))))
 
+(let (months-en mons-en months-ru mons-ru)
+  (defun month-name-to-number (month-name &key short (locale :en))
+    "Return the month number 1..12 from [long or short] month name"
+    (when (not months-en)
+      (setf months-en (make-hash-table :test #'string=)
+            mons-en (make-hash-table :test #'string=)
+            months-ru (make-hash-table :test #'string=)
+            mons-ru (make-hash-table :test #'string=))
+      (loop with len = (length +months+)
+            for i below len
+            for month = (aref +months+ i)
+            for mon-en = (getf month :en)
+            for mon-ru = (getf month :ru)
+            do
+            (setf (gethash mon-en months-en) (1+ i)
+                  (gethash mon-ru months-ru) (1+ i)
+                  (gethash (subseq mon-ru 0 3) mons-en) (1+ i)
+                  (gethash (subseq mon-en 0 3) mons-en) (1+ i))))
+    (gethash month-name    
+             (cond ((and (not short) (eql locale :en)) months-en)
+                   ((and short (eql locale :en) mons-en))
+                   ((and (not short) (eql locale :ru)) months-ru)
+                   ((and short (eql locale :ru) mons-ru))))))
 
 (defun get-month-string (month-num &key short (locale :en))
-  "month-num 1..12"
+  "Get the [localized][short] month name string.
+Agrument month-num should be in range 1..12"
   (let ((result 
          (getf (aref mediaimport.datetime::+months+ (1- month-num)) locale)))
     (if short (subseq result 0 3) result)))
@@ -164,3 +190,44 @@ If error while parsing: nil string"
 (defun datetime-string-month (dt &key short (locale :en))
   "Return textual representation of the month"
   (get-month-string (datetime-month dt) :short short :locale locale))
+
+(defun postprocess-filename-pattern (filename-pattern)
+  "Postprocess the filename pattern, escaping the dot, adding
+end of line marker, adding optional versioning of the file name"
+  (destructuring-bind (name . ext) (ppath:splitext filename-pattern)
+    (when ext
+      ;; add regexp part for versions
+      (setf name (lw:string-append name "(?:-\\d+)?")))
+    (lw:string-append
+     "(?i)"
+     (ppcre:regex-replace-all "\\." (lw:string-append name ext) "\\.")
+     "$")))
+
+(defun datetime-regexp-from-pattern (pattern)
+  "Creates a regexp for parsing the string according to the pattern.
+Example:
+=> (datetime-regexp-from-pattern \"{YYYY}-{MM}-{DD}-{hh}_{mm}\")
+\"((?:19|20)[0-9][0-9])-((?:0[1-9])|(?:1[0-2]))-((?:0[1-9])|(?:1[0-9])|(?:2[0-9])|(?:3[0-1]))-((?:0[0-9])|(?:1[0-9])|(?:2[0-3]))_([0-5][0-9])\"
+"
+  ;; get the list of patterns
+  (let ((patterns
+         (mediaimport.utils:mappings-in-format-string
+          pattern +datetime-pattern-mapping+)))
+    ;; at least one pattern found, good
+    (when patterns
+      ;; "massage" the string. add end-line matcher, escape dot
+      (let ((result-regexp (copy-array pattern)))
+        (dolist (pattern patterns)
+          (let ((mapping (gethash pattern +datetime-pattern-mapping+)))
+            (setf result-regexp
+                  (ppcre:regex-replace-all pattern
+                                           result-regexp 
+                                           (getf mapping :re)))))
+        result-regexp))))
+
+(defun datetime-regexp-from-filename-pattern (pattern)
+  "Creates a regexp for parsing the filename string according to the pattern.
+Example:"
+  (postprocess-filename-pattern (datetime-regexp-from-pattern pattern)))
+
+  
