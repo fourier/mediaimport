@@ -99,7 +99,13 @@
         :callback 'on-candidates-menu-rename
         :callback-type :interface
         :enabled-function 'candidate-item-menu-enabled-p
-        :accelerator "accelerator-f2")))))))
+        :accelerator "accelerator-f2")))
+     (:component
+      ((string.suggest-new-target-name
+        :callback 'on-candidates-menu-optimize-target
+        :callback-type :interface
+        :enabled-function 'candidate-item-menu-has-target-p
+        :accelerator "accelerator-f3")))))))
 
 ;;----------------------------------------------------------------------------
 ;; The application interface

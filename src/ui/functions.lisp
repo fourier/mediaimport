@@ -536,28 +536,48 @@ If no name provided save the default preset"
                    (eql  'exists (file-candidate-status item)))
           (setf menu-items
                 (cons (car menu-items)
-                      (cons
-                       (make-instance
-                        'capi:menu-item :title
-                        (concatenate 'string string.open-target
-                                     " "
-                                     (ppath:basename
-                                      (namestring
-                                       (file-candidate-source item))))
-                        :callback-type :interface
-                        :callback
-                        (lambda (window)
-                          (declare (ignore window))
-                          (view-file
-                           (file-candidate-target item))))
+                      (append
+                       (list
+                        (make-instance
+                         'capi:menu-item :title
+                         (concatenate 'string string.open-target
+                                      " "
+                                      (ppath:basename
+                                       (namestring
+                                        (file-candidate-source item))))
+                         :callback-type :interface
+                         :callback
+                         (lambda (window)
+                           (declare (ignore window))
+                           (view-file
+                            (file-candidate-target item)))))
+                       (list
+                        (make-instance
+                         'capi:menu-item :title string.suggest-new-target-name
+                         :callback 'on-candidates-menu-optimize-target
+                         :callback-type :interface
+                         :enabled-function 'candidate-item-menu-has-target-p
+                         :accelerator "accelerator-f3"))
                        (cdr menu-items))))))
       (make-instance 'capi:menu
                      :items
                      menu-items))))
 
 (defmethod candidate-item-menu-enabled-p ((self main-window))
-  "Called to check on main window if we have 1 candidate item with a target.
+  "Called to check on main window if we have 1 candidate item.
 Then the items in menu 'Item' are enabled"
   (when-let ((items (choice-selected-items
                      (slot-value self 'proposal-table))))
     (null (cdr items))))
+
+(defmethod candidate-item-menu-has-target-p ((self main-window))
+  "Called to check on main window if we have 1 candidate item with a target.
+Then the items in menu 'Item' are enabled"
+  (when-let ((items (choice-selected-items
+                     (slot-value self 'proposal-table))))
+    (let ((item (car items)))
+      (and (null (cdr items))
+           (file-candidate-target item)
+           (not (emptyp (namestring (file-candidate-target item))))))))
+  
+

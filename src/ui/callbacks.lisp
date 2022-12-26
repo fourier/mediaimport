@@ -181,6 +181,17 @@
                 (redisplay-collection-item proposal-table item)
                 (update-candidates self (collection-items proposal-table))))))))))
 
+(defmethod on-candidates-menu-optimize-target ((self main-window))
+  (with-slots (proposal-table) self
+    ;; make sense only for those with target
+    (when (candidate-item-menu-has-target-p self)    
+      (let ((item (car (choice-selected-items proposal-table))))
+        (bump-to-next-available-candidate item (collection-items proposal-table))
+        ;; update text
+        (redisplay-collection-item proposal-table item)
+        (update-candidates self (collection-items proposal-table))))))
+    
+
 (defun on-command-edit-changed (str edit interface caret-pos)
   "Callback called when command text changed. Used to validate the command"
   (declare (ignore interface caret-pos))
