@@ -120,4 +120,5 @@ Possible templates:
   (warning . "Warning")
   (really-overwrite-preset . "Do you really want to overwrite existing preset with the same name?")
   (really-want-delete-preset . "Do you really want to delete preset ~s ?")
+  (item . "Item")
   )
