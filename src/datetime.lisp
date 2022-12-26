@@ -46,12 +46,12 @@
 
 (define-constant +datetime-pattern-mapping+
                  (alist-hash-table
-                  `(("{YYYY}"   .   (:re "((?:19|20)[0-9][0-9])" :convert identity :kw :year))
-                    ("{MM}"     .   (:re "((?:0[1-9])|(?:1[0-2]))" :convert identity :kw :month))
-                    ("{DD}"     .   (:re "((?:0[1-9])|(?:1[0-9])|(?:2[0-9])|(?:3[0-1]))" :convert identity :kw :day))
-                    ("{hh}"     .   (:re "((?:0[0-9])|(?:1[0-9])|(?:2[0-3]))" :convert identity :kw :hour))
-                    ("{mm}"     .   (:re "([0-5][0-9])" :convert identity :kw :minute))
-                    ("{ss}"     .   (:re "([0-5][0-9])" :convert identity :kw :second))
+                  `(("{YYYY}"   .   (:re "((?:19|20)[0-9][0-9])" :convert parse-integer :kw :year))
+                    ("{MM}"     .   (:re "((?:0[1-9])|(?:1[0-2]))" :convert parse-integer :kw :month))
+                    ("{DD}"     .   (:re "((?:0[1-9])|(?:1[0-9])|(?:2[0-9])|(?:3[0-1]))" :convert parse-integer :kw :day))
+                    ("{hh}"     .   (:re "((?:0[0-9])|(?:1[0-9])|(?:2[0-3]))" :convert parse-integer :kw :hour))
+                    ("{mm}"     .   (:re "([0-5][0-9])" :convert parse-integer :kw :minute))
+                    ("{ss}"     .   (:re "([0-5][0-9])" :convert parse-integer :kw :second))
                     ("{MONTH}"  .   (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (getf x :en)))
                                      :convert ,(lambda (x) (month-name-to-number x :short nil :locale :en))
                                      :kw :month))
@@ -227,7 +227,55 @@ Example:
 
 (defun datetime-regexp-from-filename-pattern (pattern)
   "Creates a regexp for parsing the filename string according to the pattern.
-Example:"
+Example:
+=> (datetime-regexp-from-filename-pattern \"Photo-{YYYY}-{MM}.jpg\")
+\"(?i)Photo-((?:19|20)[0-9][0-9])-((?:0[1-9])|(?:1[0-2]))(?:-\\d+)?\\.jpg$\"
+"
   (postprocess-filename-pattern (datetime-regexp-from-pattern pattern)))
 
+
+(defun datetime-from-filename (parsed patterns)
+  "Create a datetime from the given array of strings and the list of corresponding patterns.
+First argument is an array, second is a list, of strings both.
+Example:
+=> (datetime-from-filename #(\"01\" \"02\" \"03\") '(\"{hh}\" \"{mm}\" \"{ss}\"))
+0nil-nil-nil 01:02:03
+"
+  ;; create hash table with keywords (key) and parsed values (val)
+  (let* ((tbl 
+          (loop
+           with patterns-table = (make-hash-table :test #'equal)
+           for val across parsed
+           for pat in patterns
+           for mapping = (gethash pat +datetime-pattern-mapping+)
+           for parsed-val = (funcall (getf mapping :convert) val)
+           do 
+           (setf (gethash (getf mapping :kw) patterns-table) parsed-val)
+           finally (return patterns-table)))
+         ;; collect all keys (keywords) and values (numbers) into the flat list
+         (args
+          (loop for k being each hash-key of tbl using (hash-value v) collect k collect v)))
+    ;; and use the flat list as the arguments to constructor
+    (apply #'make-datetime args)))
+  
+  
+(defun make-datetime-from-filename-pattern (pattern filename)
+  "Create a datetime object from the filename with a given pattern.
+Example:
+=> (make-datetime-from-filename-pattern
+    \"Photo-{YYYY}-{MON}/{MONTH}.jpg\"
+    \"Photos/PHoto-2020-Feb/December.jpg\")
+2020-12-nil nil:nil:nil"
+  ;; TODO: Cache regexp and patterns
+  (let ((regexp (datetime-regexp-from-filename-pattern pattern)))
+    (multiple-value-bind (match values)
+        (ppcre:scan-to-strings regexp filename)
+      (declare (ignore match))
+      (when values
+        (let ((patterns (mediaimport.utils:mappings-in-format-string
+                         pattern +datetime-pattern-mapping+)))
+          ;; amount of strings shall be equal to amount of patterns
+          (assert (= (length patterns) (length values)))
+          (datetime-from-filename values patterns))))))
+  
   
