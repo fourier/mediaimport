@@ -91,7 +91,15 @@
       ((string.quit
         :accelerator "accelerator-q"
         :callback 'destroy
-        :callback-type :interface)))))))
+        :callback-type :interface)))))
+   (item-menu
+    string.item
+    ((:component
+      ((string.rename-target-dots
+        :callback 'on-candidates-menu-rename
+        :callback-type :interface
+        :enabled-function 'candidate-item-menu-enabled-p
+        :accelerator "accelerator-f2")))))))
 
 ;;----------------------------------------------------------------------------
 ;; The application interface
@@ -228,7 +236,7 @@
                 :internal-border 10
                 :y-ratios '(nil nil nil nil 1 nil nil)))
   ;; all other properties
-  #-cocoa (:menu-bar application-menu)
+  #-cocoa (:menu-bar application-menu item-menu)
 
   (:default-initargs
    :title string.application-name

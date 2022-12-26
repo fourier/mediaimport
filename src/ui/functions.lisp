@@ -554,3 +554,10 @@ If no name provided save the default preset"
       (make-instance 'capi:menu
                      :items
                      menu-items))))
+
+(defmethod candidate-item-menu-enabled-p ((self main-window))
+  "Called to check on main window if we have 1 candidate item with a target.
+Then the items in menu 'Item' are enabled"
+  (when-let ((items (choice-selected-items
+                     (slot-value self 'proposal-table))))
+    (null (cdr items))))
