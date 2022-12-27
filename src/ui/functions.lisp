@@ -334,6 +334,20 @@ symbols in *settings-checkboxes*"
           (text-input-pane-enabled command-edit) enable
           (item-text copy-button) (if enable string.process-button string.copy-button))))
 
+(defmethod toggle-use-input-file-patterns ((self main-window) enable)
+  "Toggle appropriate UI elements when input file patterns checkbox is triggered"
+  (with-slots (settings-panel input-filemasks-edit) self
+    (let ((exif-button-data (find-if (lambda (x) (equal (car x) :use-exif)) *settings-checkboxes*)))
+      ;; disable/enable the 'use exif' checkbox
+      (if enable 
+          (set-button-panel-enabled-items settings-panel
+                                          :set t :disable (list exif-button-data))
+          (set-button-panel-enabled-items settings-panel
+                                          :set t))
+      ;; change the title to the input file masks field
+      (setf (titled-object-title input-filemasks-edit)
+            (if enable string.input-pattern string.filemasks-label)))))
+
 (defmethod clear-history ((self main-window))
   "Launch the Clear history dialog and clear history for selected edits."
   (with-slots (settings) self

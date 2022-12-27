@@ -34,7 +34,8 @@
                                   :reverse-sort 'string-greaterp)))
 
 (defparameter *settings-checkboxes*
-  `((:use-exif . ,string.use-exif)
+  `((:use-file-patterns . ,string.use-file-patterns)
+    (:use-exif . ,string.use-exif)
     (:search-in-subdirs . ,string.search-in-subdirs)
     (:use-custom-command . ,string.use-custom-command)
     (:move-instead-of-copy . ,string.move-instead-of-copy)

@@ -90,11 +90,16 @@
                                      items do-copy delete-original open-folder)))))))
 
 (defmethod on-main-window-tooltip ((self main-window) pane type key)
+  "Tooltip to show then the mouse pointer hovers over some control
+in main window"
   (when (eq type :tooltip) ;; the only possible type on Cocoa
     (case key
       (pattern-edit string.pattern-tooltip)
       (command-edit string.command-tooltip)
-      (input-filemasks-edit string.filemasks-tooltip))))
+      (input-filemasks-edit
+       (if (setting-selected self :use-file-patterns)
+           string.input-pattern-tooltip
+           string.filemasks-tooltip)))))
 
 
 (defmethod on-save-script-button (data (self main-window))
@@ -131,6 +136,8 @@
   (case (car data)
     (:use-custom-command
      (toggle-custom-command self t))
+    (:use-file-patterns
+     (toggle-use-input-file-patterns self t))
     (t nil)))
 
 
@@ -139,6 +146,8 @@
   (case (car data)
     (:use-custom-command
      (toggle-custom-command self nil))
+    (:use-file-patterns
+     (toggle-use-input-file-patterns self nil))
     (t nil)))
 
 

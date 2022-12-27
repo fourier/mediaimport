@@ -124,5 +124,21 @@ Possible templates:
   (suggest-new-target-name . "Suggest new target name")
   (timestamp-exif . "Timestamp (EXIF)")
   (timestamp-file . "Timestamp (File)")
-  (timestamp-name . "Timestamp (Name)") 
+  (timestamp-name . "Timestamp (Name)")
+  (input-pattern . "Input pattern")
+  (input-pattern-tooltip . "The input file pattern.
+Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\".
+If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions.
+Possible templates:
+{YYYY}  - year, like 1999
+{MM}    - month, like 01
+{DD}    - day, like 31
+{MONTH} - month name, like January
+{MON}   - 3 letters month abbreviation, like Nov
+{МЕСЯЦ} - russian month name
+{МЕС}   - russian month abbreviation
+{hh}    - hour, in 24-hours format
+{mm}    - minute
+{ss}    - second")
+  (use-file-patterns . "Parse datetime from file names")
   )
