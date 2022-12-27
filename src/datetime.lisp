@@ -6,6 +6,7 @@
    make-datetime-from-gps-timestamps
    make-datetime-from-file
    make-datetime-from-exif
+   make-datetime-from-filename-pattern
    datetime-string-month
    ;; datetime structure
    datetime
@@ -191,17 +192,22 @@ Agrument month-num should be in range 1..12"
   "Return textual representation of the month"
   (get-month-string (datetime-month dt) :short short :locale locale))
 
-(defun postprocess-filename-pattern (filename-pattern)
-  "Postprocess the filename pattern, escaping the dot, adding
-end of line marker, adding optional versioning of the file name"
+(defun preprocess-filename-pattern (filename-pattern)
+  "Preprocess the filename pattern, escaping the dot, adding
+end of line marker, expanding wildcards, adding optional
+versioning of the file name"
   (destructuring-bind (name . ext) (ppath:splitext filename-pattern)
-    (when ext
-      ;; add regexp part for versions
-      (setf name (lw:string-append name "(?:-\\d+)?")))
-    (lw:string-append
-     "(?i)"
-     (ppcre:regex-replace-all "\\." (lw:string-append name ext) "\\.")
-     "$")))
+    ;; process separately name and extension
+    (flet ((expand-wildcards (str)
+                            (mediaimport.utils:wildcard-to-regex
+                                    str :case-sensitive-p t
+                              :escape-special-p nil
+                              :start-end-markers-p nil)))
+      (setf name (expand-wildcards name)
+            ext (expand-wildcards ext)))
+    ;; add regexp part for versions
+    (setf name (lw:string-append name "(?:-\\d+)?"))
+    (lw:string-append "(?i)" name "\\" ext "$")))
 
 (defun datetime-regexp-from-pattern (pattern)
   "Creates a regexp for parsing the string according to the pattern.
@@ -231,7 +237,7 @@ Example:
 => (datetime-regexp-from-filename-pattern \"Photo-{YYYY}-{MM}.jpg\")
 \"(?i)Photo-((?:19|20)[0-9][0-9])-((?:0[1-9])|(?:1[0-2]))(?:-\\d+)?\\.jpg$\"
 "
-  (postprocess-filename-pattern (datetime-regexp-from-pattern pattern)))
+   (datetime-regexp-from-pattern (preprocess-filename-pattern pattern)))
 
 
 (defun datetime-from-filename (parsed patterns)
@@ -257,8 +263,8 @@ Example:
           (loop for k being each hash-key of tbl using (hash-value v) collect k collect v)))
     ;; and use the flat list as the arguments to constructor
     (apply #'make-datetime args)))
-  
-  
+
+
 (defun make-datetime-from-filename-pattern (pattern filename)
   "Create a datetime object from the filename with a given pattern.
 Example:
