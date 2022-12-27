@@ -16,7 +16,10 @@
    datetime-month
    create-datetime
    datetime-hour
-   datetime-date))
+   datetime-date
+   ;; aux funtions patterns-related
+   patterns-from-string
+   keyword-for-pattern))
    
 (in-package #:mediaimport.datetime)
 
@@ -216,9 +219,7 @@ Example:
 \"((?:19|20)[0-9][0-9])-((?:0[1-9])|(?:1[0-2]))-((?:0[1-9])|(?:1[0-9])|(?:2[0-9])|(?:3[0-1]))-((?:0[0-9])|(?:1[0-9])|(?:2[0-3]))_([0-5][0-9])\"
 "
   ;; get the list of patterns
-  (let ((patterns
-         (mediaimport.utils:mappings-in-format-string
-          pattern +datetime-pattern-mapping+)))
+  (let ((patterns (patterns-from-string pattern)))
     ;; at least one pattern found, good
     (when patterns
       ;; "massage" the string. add end-line matcher, escape dot
@@ -278,10 +279,22 @@ Example:
         (ppcre:scan-to-strings regexp filename)
       (declare (ignore match))
       (when values
-        (let ((patterns (mediaimport.utils:mappings-in-format-string
-                         pattern +datetime-pattern-mapping+)))
+        (let ((patterns (patterns-from-string pattern)))
           ;; amount of strings shall be equal to amount of patterns
           (assert (= (length patterns) (length values)))
           (datetime-from-filename values patterns))))))
-  
-  
+
+(defun patterns-from-string (pattern-string)
+  "Extracts the recognized date/time patterns from the string.
+Used to validate the input"
+  (mediaimport.utils:mappings-in-format-string
+   pattern-string +datetime-pattern-mapping+))
+
+
+(defun keyword-for-pattern (pattern)
+  "Return the keyword for a given text pattern.
+Example:
+=> (keyword-for-pattern \"{MON}\")
+:month"
+  (when-let (mapping (gethash pattern +datetime-pattern-mapping+))
+    (getf mapping :kw)))

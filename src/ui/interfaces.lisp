@@ -150,11 +150,12 @@
                          :visible-max-width nil
                          :visible-max-height nil
                          :visible-min-height '(:character 1)
-                         :callback 'on-collect-button)
+                         :callback 'on-collect-button
+                         :text-change-callback 'on-input-filemasks-edit-changed)
    (pattern-edit text-input-choice :title string.output-pattern
                  :visible-max-width nil
                  :visible-max-height '(:character 1)
-            :callback 'on-collect-button)
+                 :callback 'on-collect-button)
    (command-edit text-input-choice :visible-min-width '(:character 40)
                  :title string.custom-command
                  :callback 'on-collect-button

@@ -599,3 +599,32 @@ Then the items in menu 'Item' are enabled"
            (not (emptyp (namestring (file-candidate-target item))))))))
   
 
+(defun validate-input-file-pattern-string (str output-pattern)
+  "Verify if the the patterns in input string STR are enough
+to for the output string using OUTPUT-PATTERN"
+  (when-let* ((output-patterns (mediaimport.datetime:patterns-from-string output-pattern))
+              (input-patterns (mediaimport.datetime:patterns-from-string str)))
+    ;; Build up the hash table from the keywords in string
+    (let ((input-kws (make-hash-table)))
+      (dolist (pat input-patterns)
+        (setf (gethash (mediaimport.datetime:keyword-for-pattern pat) input-kws) t))
+      ;; check if there is a keyword in a output list which is not yet defined in input
+      (loop for pat in output-patterns
+            for kw = (mediaimport.datetime:keyword-for-pattern pat)
+            when (not (gethash kw input-kws)) return nil
+            finally return t))))
+    
+(defmethod toggle-interface-on-input-patterns-change ((self main-window) &optional text)
+  "Callback called when file masks text changed. Used to validate the pattern"
+  (with-slots (input-filemasks-edit pattern-edit collect-button) self
+  (unless text
+    (setf text (text-input-pane-text input-filemasks-edit)))
+  (let* ((output-pattern (text-input-pane-text pattern-edit))
+         (validation-failed (and (setting-selected self :use-file-patterns)
+                                 (not (validate-input-file-pattern-string text output-pattern)))))
+    (setf (simple-pane-background input-filemasks-edit)
+          (if validation-failed
+              :red
+              ;; clear color for normal file masks and correct patterns
+              :black))
+      (setf (button-enabled collect-button) (not validation-failed)))))

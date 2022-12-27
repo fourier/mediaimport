@@ -40,6 +40,7 @@
                                         :destination-path dest-path
                                         :pattern pattern-text
                                         :filemasks masks
+                                        :use-pattern (setting-selected self :use-file-patterns)
                                         :use-exif (setting-selected self :use-exif)
                                         :comparison-type comparison-type
                                         :recursive (setting-selected self :search-in-subdirs))))
@@ -137,7 +138,8 @@ in main window"
     (:use-custom-command
      (toggle-custom-command self t))
     (:use-file-patterns
-     (toggle-use-input-file-patterns self t))
+     (toggle-use-input-file-patterns self t)
+     (toggle-interface-on-input-patterns-change self))
     (t nil)))
 
 
@@ -147,7 +149,8 @@ in main window"
     (:use-custom-command
      (toggle-custom-command self nil))
     (:use-file-patterns
-     (toggle-use-input-file-patterns self nil))
+     (toggle-use-input-file-patterns self nil)
+     (toggle-interface-on-input-patterns-change self))
     (t nil)))
 
 
@@ -206,6 +209,11 @@ in main window"
   (declare (ignore interface caret-pos))
   (setf (simple-pane-foreground edit)
         (if (validate-command-string str) :black :red)))
+
+(defun on-input-filemasks-edit-changed (str edit interface caret-pos)
+  "Callback called when file masks text changed. Used to validate the pattern"
+  (declare (ignore caret-pos edit))
+  (toggle-interface-on-input-patterns-change interface str))
 
 (defmethod on-clear-history-button ((self cocoa-application-interface))
   "Clear History menu item handler"
