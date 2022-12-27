@@ -216,14 +216,18 @@
 
 
 (defun file-candidate-to-row (cand)
-  (let ((target (file-candidate-target cand)))
+  "Construct the list of the column contents based on file-candidate input.
+The list fills the row in the multi-column panel listing the candidates"
+  (let ((target (file-candidate-target cand))
+        (timestamps (file-candidate-timestamp cand)))
     (list (file-candidate-source cand)
           (if target target string.skip)
           (if (file-candidate-comment cand)
               (file-candidate-comment cand)
-              ""))))
-
-
+              "")
+          (format nil "~a" (or (getf timestamps :file) ""))
+          (format nil "~a" (or (getf timestamps :exif) ""))
+          (format nil "~a" (or (getf timestamps :name) "")))))
 
 (defun color-file-candidate (lp candidate state)
   (declare (ignore lp))

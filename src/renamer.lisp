@@ -57,9 +57,9 @@ and (FORMAT formatting + getter function")
            :documentation "Source file (file to copy)")
    (target :accessor file-candidate-target :initarg :target
            :documentation "Target file (file to copy to)")
-   ;; TODO: investigate if it is needed. Doesn't seem to be used
    (timestamp :accessor file-candidate-timestamp :initarg :timestamp
-           :documentation "Timestamp of the source file")
+           :documentation "Property list of timestamps of the source file: could be exif-based, pattern-based or file-based.
+            Example: '(:exif ts1 :file ts2 :name ts3)")
    (comment :accessor file-candidate-comment :initarg :comment :initform ""
            :documentation "Comments, i.e. if the similar file already exists"))
   (:documentation "File Candidate is a struct holding information about
@@ -83,6 +83,8 @@ the input and output file name as well as the source file timestamp"))
                                :documentation "Renaming pattern. Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\". If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions")
                       (use-exif :initform nil :initarg :use-exif
                                 :documentation "Boolean flag specifying if we need to try to extract information from EXIF. It takes little longer and not needed for example for movies")
+                      (use-pattern :initform nil :initarg :use-pattern
+                                :documentation "Boolean flag specifying if we need to try to extract information from pattern in 'filemasks'. use-exif is ignored in this case")
                       (recursive :initform nil :initarg :recursive
                                  :documentation "Boolean flag specifying if we need to descend to subdirectories to collect list of files")
                       (comparison-type :initform :crc :initarg :comparison-type
@@ -163,31 +165,44 @@ Example:
 the full path to the file renamed after its timestamp using pattern specified
 in the class instance.
 If the :use-exif flag is set in the class instance and the file is JPEG,
-try to get the EXIF information first for timestamp."
-  (with-slots (destination-path pattern use-exif) self
+try to get the EXIF information first for timestamp.
+If the :use-pattern flag is set the :use-exif is ignored and the timestamp is
+recovered from the file name"
+  (with-slots (destination-path pattern use-exif use-pattern filemasks) self
     (let* ((ext (string-upcase (pathname-type input-filename)))
            comment
-           timestamp)
+           timestamp-exif
+           timestamp-file
+           timestamp-name)
       ;; First try to get exif timestamp or comment when error
       (when (and (or (string= ext "JPG")
                      (string= ext "JPEG"))
-                 use-exif)
-        (multiple-value-bind (ts error-comment)
-            (make-datetime-from-exif input-filename)
-          (setf timestamp ts
-                comment error-comment)))
-      ;; no timestamp or not jpeg - get the datetime from the file
-      (setf timestamp
-            (or timestamp
-                (make-datetime-from-file input-filename)))
-      ;; generate filename
-      (let ((fname (timestamp-based-filename input-filename
-                                             timestamp
-                                             pattern)))
-        (values 
+                 (multiple-value-bind (ts error-comment)
+                     (make-datetime-from-exif input-filename)
+                   (setf timestamp-exif ts
+                         comment error-comment))))
+      ;; then set the timestamp from file name
+      (when use-pattern
+        (setf timestamp-name
+              (loop for mask in filemasks
+                    for ts = (make-datetime-from-filename-pattern mask input-filename)
+                    when ts return ts)))
+      ;; get the datetime from the file itself
+      (setf timestamp-file (make-datetime-from-file input-filename))
+      ;; finally decide which timestamp is used when creating the path
+      (let* ((timestamp
+              (or (cond (use-exif timestamp-exif)
+                        (use-pattern timestamp-name)
+                        (t nil))
+                 timestamp-file))
+             ;; generate filename
+             (fname (timestamp-based-filename input-filename
+                                              timestamp
+                                              pattern)))
+        (values
          (fad:merge-pathnames-as-file
           (fad:pathname-as-directory destination-path) fname)
-         timestamp
+         (list :file timestamp-file :exif timestamp-exif :name timestamp-name)
          comment)))))
 
 

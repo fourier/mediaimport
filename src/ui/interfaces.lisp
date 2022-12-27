@@ -202,7 +202,16 @@
                                :visible-min-width (:character 45))
                               (:title ,string.comments-column
                                :adjust :left
-                               :visible-min-width (:character 45))))
+                               :visible-min-width (:character 45))
+                              (:title ,string.timestamp-file
+                               :adjust :left
+                               :visible-min-width (:character 20))
+                              (:title ,string.timestamp-exif
+                               :adjust :left
+                               :visible-min-width (:character 20))
+                              (:title ,string.timestamp-name
+                               :adjust :left
+                               :visible-min-width (:character 20))))
    (output-edit collector-pane :buffer-name "Output buffer")
    (collect-button push-button :text string.collect-data :callback 'on-collect-button)
    (copy-button push-button :text string.copy-button :callback 'on-copy-button)

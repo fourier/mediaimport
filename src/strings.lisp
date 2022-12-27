@@ -122,4 +122,7 @@ Possible templates:
   (really-want-delete-preset . "Do you really want to delete preset ~s ?")
   (item . "Item")
   (suggest-new-target-name . "Suggest new target name")
+  (timestamp-exif . "Timestamp(EXIF)")
+  (timestamp-file . "Timestamp(file)")
+  (timestamp-name . "Timestamp(name)") 
   )
