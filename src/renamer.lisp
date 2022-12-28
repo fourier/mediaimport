@@ -78,7 +78,11 @@ the input and output file name as well as the source file timestamp"))
                       (destination-path :initarg :destination-path
                                         :documentation "Destination directory used as a base to copy files to")
                       (filemasks :initform nil :initarg :filemasks
-                                 :documentation "File masks. In constructor one provides a string like \"*.jpg, *.png\" and it is converted to the list of regexps matching those filemasks")
+                                 :documentation "File masks. In constructor one provides a string like \"*.jpg, *.png\"")
+                      (filemasks-cache :initform nil
+                                       :documentation "Cache for filemasks. Contains a list of compiled regexps for filemasks.")
+                      (filemasks-patterns :initform nil
+                                       :documentation "Cache for filemasks. Contains a list of lists of parsed pattens from filemasks.")
                       (pattern :initform nil :initarg :pattern
                                :documentation "Renaming pattern. Example: \"{YYYY}-{MM}-{DD}/Photo-{hh}_{mm}.jpg\". If extension provided, use this extension, otherwise if no extension provided or it is a wildcard .* use original extensions")
                       (use-exif :initform nil :initarg :use-exif
@@ -98,18 +102,44 @@ of candidates for copy/process"))
 
 (defmethod initialize-instance :after ((self renamer) &key)
   "Constructor for RENAMER class"
-  (with-slots (source-path destination-path filemasks) self
+  (with-slots (source-path destination-path filemasks use-pattern) self
     ;; process paths
     (setf source-path (ppath:abspath (ppath:expanduser source-path)))
     (setf destination-path (ppath:abspath (ppath:expanduser destination-path)))
     ;; process filemasks
-    (if (and filemasks (= (length filemasks) 0))
-        (setf filemasks nil)
-        (setf filemasks (mapcar (compose 
-                                 #'ppcre:create-scanner
-                                 #'wildcard-to-regex
-                                 (curry #'string-trim " "))
-                                (split-sequence:split-sequence #\, filemasks))))))
+    (when (and filemasks (= (length filemasks) 0))
+      (setf filemasks nil))
+    (when filemasks
+      (if use-pattern
+          (init-filemasks-by-patterns self)
+          ;; normal case, exif, timestamp etc
+          (init-filemasks-by-masks self)))))
+
+(defmethod init-filemasks-by-masks ((self renamer))
+  "Convert textual file masks to the list of regexps"
+  (with-slots (filemasks filemasks-cache) self
+    (setf filemasks-cache
+          (mapcar (compose 
+                   #'ppcre:create-scanner
+                   #'wildcard-to-regex
+                   (curry #'string-trim " "))
+                  (split-sequence:split-sequence #\, filemasks)))))
+
+(defmethod init-filemasks-by-patterns ((self renamer))
+  "Convert textual file masks with date time patterns to the list of regexps,
+additionally filling in the lists of patterns"  
+  (with-slots (filemasks filemasks-cache filemasks-patterns) self
+    (setf filemasks-cache
+          (mapcar (compose 
+                   #'ppcre:create-scanner
+                   #'datetime-regexp-from-filename-pattern
+                   (curry #'string-trim " "))
+                  (split-sequence:split-sequence #\, filemasks))
+          filemasks-patterns
+          (mapcar (compose 
+                   #'patterns-from-string
+                   (curry #'string-trim " "))
+                  (split-sequence:split-sequence #\, filemasks)))))
 
 
 (defun format-timestamp-string (pattern ts)
@@ -168,7 +198,8 @@ If the :use-exif flag is set in the class instance and the file is JPEG,
 try to get the EXIF information first for timestamp.
 If the :use-pattern flag is set the :use-exif is ignored and the timestamp is
 recovered from the file name"
-  (with-slots (destination-path pattern use-exif use-pattern filemasks) self
+  (with-slots (destination-path pattern use-exif use-pattern filemasks-cache filemasks-patterns)
+      self
     (let* ((ext (string-upcase (pathname-type input-filename)))
            comment
            timestamp-exif
@@ -184,8 +215,12 @@ recovered from the file name"
       ;; then set the timestamp from file name
       (when use-pattern
         (setf timestamp-name
-              (loop for mask in filemasks
-                    for ts = (make-datetime-from-filename-pattern mask input-filename)
+              (loop for regexp in filemasks-cache
+                    for patterns in filemasks-patterns
+                    for ts = (make-datetime-from-filename-regexp
+                              regexp
+                              patterns
+                              (namestring input-filename))
                     when ts return ts)))
       ;; get the datetime from the file itself
       (setf timestamp-file (make-datetime-from-file input-filename))
@@ -337,18 +372,18 @@ file or bumped files based on FILENAME"
                      files))))
 
 
-(defun acceptable-file-p (fname filemasks)
+(defun acceptable-file-p (fname filemasks-cache)
   "Predicate which identifies if the filename is acceptable,
 i.e. complies to any of file masks"
   (let ((short-name (file-namestring fname)))
-    (some (lambda (x) (ppcre:scan x short-name)) filemasks)))
+    (some (lambda (x) (ppcre:scan x short-name)) filemasks-cache)))
 
 
 (defmethod create-potential-file-candidates ((self renamer))
   "Create a preliminary list of file candidates.
 This function iterates over all files, selecting those matching filemasks
 and prepare a target name based on timestamp/etc information."
-  (with-slots (source-path filemasks recursive) self
+  (with-slots (source-path filemasks-cache recursive) self
     (let (fnames)
       ;; collect list of all filenames into the fnames list
       (if recursive
@@ -365,8 +400,8 @@ and prepare a target name based on timestamp/etc information."
                                  :timestamp ts
                                  :comment comment)))
               (nreverse
-               (if filemasks
-                   (remove-if-not (rcurry #'acceptable-file-p filemasks) fnames)
+               (if filemasks-cache
+                   (remove-if-not (rcurry #'acceptable-file-p filemasks-cache) fnames)
                    fnames))))))
 
 

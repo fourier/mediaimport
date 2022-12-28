@@ -6,18 +6,20 @@
    make-datetime-from-gps-timestamps
    make-datetime-from-file
    make-datetime-from-exif
+   make-datetime-from-filename-regexp   
    make-datetime-from-filename-pattern
    datetime-string-month
    ;; datetime structure
    datetime
    datetime-second
    datetime-minute
-   datetime datetime-year
-   datetime-month
-   create-datetime
    datetime-hour
-   datetime-date
+   datetime-year
+   datetime-month
+   datetime-date   
+   create-datetime
    ;; aux funtions patterns-related
+   datetime-regexp-from-filename-pattern
    patterns-from-string
    keyword-for-pattern))
    
@@ -48,27 +50,27 @@
 
 (declaim (ftype (function (t) t) month-name-to-number))
 
-(define-constant +datetime-pattern-mapping+
-                 (alist-hash-table
-                  `(("{YYYY}"   .   (:re "((?:19|20)[0-9][0-9])" :convert parse-integer :kw :year))
-                    ("{MM}"     .   (:re "((?:0[1-9])|(?:1[0-2]))" :convert parse-integer :kw :month))
-                    ("{DD}"     .   (:re "((?:0[1-9])|(?:1[0-9])|(?:2[0-9])|(?:3[0-1]))" :convert parse-integer :kw :day))
-                    ("{hh}"     .   (:re "((?:0[0-9])|(?:1[0-9])|(?:2[0-3]))" :convert parse-integer :kw :hour))
-                    ("{mm}"     .   (:re "([0-5][0-9])" :convert parse-integer :kw :minute))
-                    ("{ss}"     .   (:re "([0-5][0-9])" :convert parse-integer :kw :second))
-                    ("{MONTH}"  .   (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (getf x :en)))
-                                     :convert ,(lambda (x) (month-name-to-number x :short nil :locale :en))
-                                     :kw :month))
-                    ("{MON}"    .   (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (subseq (getf x :en) 0 3)))
-                                     :convert ,(lambda (x) (month-name-to-number x :short t :locale :en))
-                                     :kw :month))
-                    ("{МЕСЯЦ}" . (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (getf x :ru)))
-                                             :convert ,(lambda (x) (month-name-to-number x :short t :locale :en))
-                                             :kw :month))
-                    ("{МЕС}"     . (:re,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (subseq (getf x :ru) 0 3)))
-                                             :convert ,(lambda (x) (month-name-to-number x :short t :locale :en))
-                                             :kw :month)))
-                  :test #'equal))
+(defparameter +datetime-pattern-mapping+
+  (alist-hash-table
+   `(("{YYYY}"   .   (:re "((?:19|20)[0-9][0-9])" :convert parse-integer :kw :year))
+     ("{MM}"     .   (:re "((?:0[1-9])|(?:1[0-2]))" :convert parse-integer :kw :month))
+     ("{DD}"     .   (:re "((?:0[1-9])|(?:1[0-9])|(?:2[0-9])|(?:3[0-1]))" :convert parse-integer :kw :date))
+     ("{hh}"     .   (:re "((?:0[0-9])|(?:1[0-9])|(?:2[0-3]))" :convert parse-integer :kw :hour))
+     ("{mm}"     .   (:re "([0-5][0-9])" :convert parse-integer :kw :minute))
+     ("{ss}"     .   (:re "([0-5][0-9])" :convert parse-integer :kw :second))
+     ("{MONTH}"  .   (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (getf x :en)))
+                      :convert ,(lambda (x) (month-name-to-number x :short nil :locale :en))
+                      :kw :month))
+     ("{MON}"    .   (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (subseq (getf x :en) 0 3)))
+                      :convert ,(lambda (x) (month-name-to-number x :short t :locale :en))
+                      :kw :month))
+     ("{МЕСЯЦ}" . (:re ,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (getf x :ru)))
+                              :convert ,(lambda (x) (month-name-to-number x :short t :locale :en))
+                              :kw :month))
+     ("{МЕС}"     . (:re,(format nil "(~{~a~^|~})" (loop for x across +months+ collect (subseq (getf x :ru) 0 3)))
+                              :convert ,(lambda (x) (month-name-to-number x :short t :locale :en))
+                              :kw :month)))
+   :test #'equal))
 
 
 (defstruct (datetime
@@ -265,6 +267,23 @@ Example:
     ;; and use the flat list as the arguments to constructor
     (apply #'make-datetime args)))
 
+(defun make-datetime-from-filename-regexp (regexp patterns filename)
+  "Create a datetime object from the filename with a given pattern.
+Example:
+=> (make-datetime-from-filename-regexp
+    (datetime-regexp-from-filename-pattern
+    \"Photo-{YYYY}-{MON}/{MONTH}.jpg\")
+    (patterns-from-string
+     \"Photo-{YYYY}-{MON}/{MONTH}.jpg\")
+    \"Photos/PHoto-2020-Feb/December.jpg\")
+2020-12-nil nil:nil:nil"
+    (multiple-value-bind (match values)
+        (ppcre:scan-to-strings regexp filename)
+      (declare (ignore match))
+      (when values
+        ;; amount of strings shall be equal to amount of patterns
+        (assert (= (length patterns) (length values)))
+        (datetime-from-filename values patterns))))
 
 (defun make-datetime-from-filename-pattern (pattern filename)
   "Create a datetime object from the filename with a given pattern.
@@ -274,15 +293,9 @@ Example:
     \"Photos/PHoto-2020-Feb/December.jpg\")
 2020-12-nil nil:nil:nil"
   ;; TODO: Cache regexp and patterns
-  (let ((regexp (datetime-regexp-from-filename-pattern pattern)))
-    (multiple-value-bind (match values)
-        (ppcre:scan-to-strings regexp filename)
-      (declare (ignore match))
-      (when values
-        (let ((patterns (patterns-from-string pattern)))
-          ;; amount of strings shall be equal to amount of patterns
-          (assert (= (length patterns) (length values)))
-          (datetime-from-filename values patterns))))))
+  (let ((regexp (datetime-regexp-from-filename-pattern pattern))
+        (patterns (patterns-from-string pattern)))
+    (make-datetime-from-filename-regexp regexp patterns filename)))
 
 (defun patterns-from-string (pattern-string)
   "Extracts the recognized date/time patterns from the string.

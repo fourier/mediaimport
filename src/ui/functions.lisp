@@ -34,8 +34,12 @@
     (fill-default-values self)
     ;; Restore history of the edit controls
     (restore-edit-controls-history self)
-    ;; And finally recover the last preset
-    (restore-from-last-preset self)))
+    ;; Recover the last preset
+    (restore-from-last-preset self)
+    ;; Set the UI controls state
+    (toggle-use-input-file-patterns self (setting-selected self :use-file-patterns))
+    (toggle-interface-on-input-patterns-change self)))
+                                          
 
 
 (defmethod top-level-interface-geometry-key ((self main-window))
