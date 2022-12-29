@@ -320,7 +320,12 @@ background operations happened"
           (text-input-pane-enabled output-directory-edit) enable
           (text-input-pane-enabled input-filemasks-edit) enable
           (text-input-pane-enabled pattern-edit) enable
-          (simple-pane-enabled settings-panel) enable)))
+          (simple-pane-enabled settings-panel) enable)
+    ;; Set the UI controls state
+    ;; TODO: fix this
+    (toggle-use-input-file-patterns self (setting-selected self :use-file-patterns))
+    (toggle-interface-on-input-patterns-change self)))
+    
 
 
 (defmethod setting-selected ((self main-window) option)

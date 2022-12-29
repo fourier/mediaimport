@@ -226,9 +226,8 @@ recovered from the file name"
       (setf timestamp-file (make-datetime-from-file input-filename))
       ;; finally decide which timestamp is used when creating the path
       (let* ((timestamp
-              (or (cond (use-exif timestamp-exif)
-                        (use-pattern timestamp-name)
-                        (t nil))
+              (or (cond (use-pattern timestamp-name)
+                        (use-exif timestamp-exif))
                  timestamp-file))
              ;; generate filename
              (fname (timestamp-based-filename input-filename
@@ -372,10 +371,11 @@ file or bumped files based on FILENAME"
                      files))))
 
 
-(defun acceptable-file-p (fname filemasks-cache)
+(defun acceptable-file-p (fname filemasks-cache full-path)
   "Predicate which identifies if the filename is acceptable,
-i.e. complies to any of file masks"
-  (let ((short-name (file-namestring fname)))
+i.e. complies to any of file masks. If FULL-PATH is T, use
+the full filename for matching instead of short name."
+  (let ((short-name (if full-path (namestring fname) (file-namestring fname))))
     (some (lambda (x) (ppcre:scan x short-name)) filemasks-cache)))
 
 
@@ -383,7 +383,7 @@ i.e. complies to any of file masks"
   "Create a preliminary list of file candidates.
 This function iterates over all files, selecting those matching filemasks
 and prepare a target name based on timestamp/etc information."
-  (with-slots (source-path filemasks-cache recursive) self
+  (with-slots (source-path filemasks-cache recursive use-pattern) self
     (let (fnames)
       ;; collect list of all filenames into the fnames list
       (if recursive
@@ -401,7 +401,7 @@ and prepare a target name based on timestamp/etc information."
                                  :comment comment)))
               (nreverse
                (if filemasks-cache
-                   (remove-if-not (rcurry #'acceptable-file-p filemasks-cache) fnames)
+                   (remove-if-not (rcurry #'acceptable-file-p filemasks-cache use-pattern) fnames)
                    fnames))))))
 
 
