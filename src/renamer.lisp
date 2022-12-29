@@ -45,8 +45,8 @@ and (FORMAT formatting + getter function)")
 
 (defvar +command-format-mapping+
   (alist-hash-table
-   `(("{SOURCE}" .  ("~s" . ,(compose #'namestring #'file-candidate-source)))
-     ("{TARGET}" .  ("~s" . ,(compose #'namestring #'file-candidate-target))))
+   `(("{SOURCE}" .  ("~s" . ,(lambda (obj) (namestring (file-candidate-source obj)))))
+     ("{TARGET}" .  ("~s" . ,(lambda (obj) (namestring (file-candidate-target obj))))))
    :test #'equal)
   "Hash table containing mapping between command pseudo-formatting
 and (FORMAT formatting + getter function")
