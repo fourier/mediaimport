@@ -616,7 +616,7 @@ to for the output string using OUTPUT-PATTERN"
       (loop for pat in output-patterns
             for kw = (mediaimport.datetime:keyword-for-pattern pat)
             when (not (gethash kw input-kws)) return nil
-            finally return t))))
+            finally (return t)))))
     
 (defmethod toggle-interface-on-input-patterns-change ((self main-window) &optional text)
   "Callback called when file masks text changed. Used to validate the pattern"
