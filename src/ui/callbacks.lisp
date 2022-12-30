@@ -13,6 +13,8 @@
 (defun on-collect-button (data self)
   ;; could be called from edit fields or as a button itself
   (declare (ignore data))
+  ;; clean the logger output
+  (mediaimport.logger:logger-info "")
   (with-slots (input-directory-edit
                output-directory-edit
                input-filemasks-edit
@@ -62,6 +64,8 @@
 
 (defun on-copy-button (data self)
   (declare (ignore data))
+  ;; clean the logger output
+  (mediaimport.logger:logger-info "")
   (with-slots (proposal-table) self
     (let ((do-copy (setting-selected self :use-custom-command))
           (delete-original (setting-selected self :move-instead-of-copy))

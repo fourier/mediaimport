@@ -21,7 +21,8 @@
    push-top
    md5string
    view-file
-   open-folder))
+   open-folder
+   posixify))
 
    
 (in-package #:mediaimport.utils)
@@ -357,3 +358,13 @@ Linux (via xdg-open)"
   #+sbcl
   (sb-ext:run-program "/usr/bin/xdg-open" (list dirname) :wait nil))
 
+
+(defun posixify (file-name)
+  "Replace slash with backslash in path on Windows"
+  ;; TODO: export ppath.details.nt::posixify
+  #+windows   
+  (etypecase file-name
+    (string (substitute #\/ #\\ file-name))
+    (pathname (substitute #\/ #\\ (namestring file-name))))
+  #-windows
+  (namestring file-name))

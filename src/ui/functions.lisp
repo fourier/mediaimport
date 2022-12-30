@@ -59,7 +59,11 @@
        (execute-with-interface-if-alive
         self
         #'(lambda ()
-            (setf (titled-object-message self) text)))
+            (setf (titled-object-message self) text)
+            ;; output to the output pane as well
+            (let ((stream (collector-pane-stream (slot-value self 'output-edit))))
+              (format stream text)
+              (format stream "~%"))))
        (values))))
 
 
@@ -215,7 +219,9 @@
                                    (setf (collection-items proposal-table)
                                          candidates
                                          (button-enabled copy-button) (> (length candidates) 0)))))
-        (toggle-progress self nil :end size)))))
+        
+        (toggle-progress self nil :end size)
+        (mediaimport.logger:logger-info "Done.")))))
 
 
 
@@ -281,6 +287,7 @@ if T execute command from command-edit, otherwise just copy files"
         (copy-files items :callback #'copy-files-callback :delete-original delete-original))
     ;; update progress, hide it and enable all buttons
     (toggle-progress self nil :end (length items))
+    (mediaimport.logger:logger-info "Done.")
     ;; and finally open folder if the setting requested
     (when open-folder
       (open-folder (text-input-pane-text (slot-value self 'output-directory-edit))))))

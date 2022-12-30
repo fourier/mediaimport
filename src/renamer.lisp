@@ -133,6 +133,7 @@ additionally filling in the lists of patterns"
           (mapcar (compose 
                    #'ppcre:create-scanner
                    #'datetime-regexp-from-filename-pattern
+                   #'posixify
                    (curry #'string-trim " "))
                   (split-sequence:split-sequence #\, filemasks))
           filemasks-patterns
@@ -220,7 +221,7 @@ recovered from the file name"
                     for ts = (make-datetime-from-filename-regexp
                               regexp
                               patterns
-                              (namestring input-filename))
+                              (posixify input-filename))
                     when ts return ts)))
       ;; get the datetime from the file itself
       (setf timestamp-file (make-datetime-from-file input-filename))
@@ -375,7 +376,10 @@ file or bumped files based on FILENAME"
   "Predicate which identifies if the filename is acceptable,
 i.e. complies to any of file masks. If FULL-PATH is T, use
 the full filename for matching instead of short name."
-  (let ((short-name (if full-path (namestring fname) (file-namestring fname))))
+  (let ((short-name (if full-path
+                        (posixify fname)
+                        (file-namestring fname))))
+    (mediaimport.logger:logger-info "Verifying file: ~a" short-name)
     (some (lambda (x) (ppcre:scan x short-name)) filemasks-cache)))
 
 
@@ -418,6 +422,7 @@ file names."
       (dolist (cand candidates)
         (when progress-fun (funcall progress-fun (incf progress)))
         (let ((target (file-candidate-target cand)))
+          (mediaimport.logger:logger-info "Checking: ~a" (file-candidate-source cand))
           ;; find the list of similar files
           (when-let (similar (find-similar-files target))
             ;; some existing files are similar. Try to find those who are the same
@@ -556,6 +561,7 @@ this table first and add if not found"
 
 (defun ensure-copy-file (from to)
   "Copy file FROM to the file TO overwriting it if exists"
+  (mediaimport.logger:logger-info "Copying: ~a" from)
   #-:lispworks
   (alexandria:copy-file from to)
   ;; only starting from 6.1
