@@ -1,19 +1,11 @@
-[![Build Status](https://travis-ci.org/fourier/mediaimport.svg?branch=master)](https://travis-ci.org/fourier/mediaimport)
-# Media Import
-Media Import is a simple Win32/OSX utility for copying images(and other files) according to their timestamps. It is implemented with LispWorks 7.1 32bit for OSX and Windows.
-![example](https://github.com/fourier/mediaimport/raw/screenshots/screenshot1.png "Example")
-![example-win32](https://github.com/fourier/mediaimport/raw/screenshots/screenshot-win.png "Window screenshot")
+# Give Up GitHub
 
-## Features
-- It verifies if there are already files with the suggested names, and if there are, skip if they are identical or suggest another name;
-- Allows to search by file mask like "\*.png, \*.jpg";
-- Allows to look in subdirectories;
-- Rename according to the pattern, where one can specify subdirectories and files using template declarations like {yyyy} for years;
-- Allows to get timestamp from EXIF data for JPEG files
+This project has given up GitHub.  ([See Software Freedom Conservancy's *Give Up  GitHub* site for details](https://GiveUpGitHub.org).)
 
-## Installation
-Go to [this location](https://github.com/fourier/mediaimport/releases) to download the latest version of the software.
+You can now find this project at [https://codeberg.org/fourier/mediaimport](https://codeberg.org/fourier/mediaimport) instead.
 
-## Copyright
-Copyright (c) [Alexey Veretennikov](mailto:alexey.veretennikov@gmail.com). 
-Icon made by Pixel perfect from www.flaticon.com
+Any use of this project's code by GitHub Copilot, past or present, is done without our permission.  We do not consent to GitHub's use of this project's code in Copilot.
+
+Join us; you can [give up GitHub](https://GiveUpGitHub.org) too!
+
+![Logo of the GiveUpGitHub campaign](https://sfconservancy.org/img/GiveUpGitHub.png)
